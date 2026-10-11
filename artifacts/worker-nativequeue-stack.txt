@@ -1,0 +1,95 @@
+Thread (0x7260):
+  [Native Frames]
+  System.Private.CoreLib.il!System.Threading.Monitor.Wait(class System.Object,int32)
+  System.Private.CoreLib.il!System.Threading.ManualResetEventSlim.Wait(int32,value class System.Threading.CancellationToken)
+  System.Private.CoreLib.il!System.Threading.Tasks.Task.SpinThenBlockingWait(int32,value class System.Threading.CancellationToken)
+  System.Private.CoreLib.il!System.Threading.Tasks.Task.InternalWaitCore(int32,value class System.Threading.CancellationToken)
+  System.Private.CoreLib.il!System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(class System.Threading.Tasks.Task,value class System.Threading.Tasks.ConfigureAwaitOptions)
+  SqlLineDebugger!SqlLineDebugger.DebugWorker.Run(class System.String)
+  SqlLineDebugger!SqlLineDebugger.Program.Main(class System.String[])
+
+Thread (0x8340):
+  [Native Frames]
+  System.Private.CoreLib.il!System.Threading.PortableThreadPool+IOCompletionPoller.Poll()
+
+Thread (0x6C0C):
+  [Native Frames]
+  System.Private.CoreLib.il!System.Threading.PortableThreadPool+IOCompletionPoller.Poll()
+
+Thread (0x5B0):
+  [Native Frames]
+  System.Private.CoreLib.il!System.Threading.WaitHandle.WaitOneNoCheck(int32)
+  System.Private.CoreLib.il!System.Threading.PortableThreadPool+GateThread.GateThreadStart()
+
+Thread (0x4514):
+  [Native Frames]
+  System.Private.CoreLib.il!Interop+Kernel32.GetQueuedCompletionStatus(int,unsigned int32&,unsigned int&,int&,int32)
+  System.Private.CoreLib.il!System.Threading.LowLevelLifoSemaphore.WaitForSignal(int32)
+  System.Private.CoreLib.il!System.Threading.LowLevelLifoSemaphore.Wait(int32,bool)
+  System.Private.CoreLib.il!System.Threading.PortableThreadPool+WorkerThread.WorkerThreadStart()
+
+Thread (0x8EFC):
+  [Native Frames]
+  Microsoft.Data.SqlClient!Interop.Windows.Sni.SniNativeMethods.SniReadSyncOverAsync(class Microsoft.Data.SqlClient.SNIHandle,int&,int32)
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.SniNativeWrapper.SniReadSyncOverAsync(class Microsoft.Data.SqlClient.SNIHandle,int&,int32)
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.TdsParserStateObjectNative.ReadSyncOverAsync(int32,unsigned int32&)
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.TdsParserStateObject.ReadSniSyncOverAsync()
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.TdsParserStateObject.TryReadNetworkPacket()
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.TdsParserStateObject.TryPrepareBuffer()
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.TdsParserStateObject.TryReadByte(unsigned int8&)
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.TdsParser.TryRun(value class Microsoft.Data.SqlClient.RunBehavior,class Microsoft.Data.SqlClient.SqlCommand,class Microsoft.Data.SqlClient.SqlDataReader,class Microsoft.Data.SqlClient.BulkCopySimpleResultSet,class Microsoft.Data.SqlClient.TdsParserStateObject,bool&)
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.SqlDataReader.TryConsumeMetaData()
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.SqlDataReader.get_MetaData()
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.SqlCommand.FinishExecuteReader(class Microsoft.Data.SqlClient.SqlDataReader,value class Microsoft.Data.SqlClient.RunBehavior,class System.String,bool,bool,bool)
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.SqlCommand.RunExecuteReaderTds(value class System.Data.CommandBehavior,value class Microsoft.Data.SqlClient.RunBehavior,bool,bool,int32,class System.Threading.Tasks.Task&,bool,bool,class Microsoft.Data.SqlClient.SqlDataReader,bool)
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.SqlCommand.RunExecuteReader(value class System.Data.CommandBehavior,value class Microsoft.Data.SqlClient.RunBehavior,bool,class System.Threading.Tasks.TaskCompletionSource`1<class System.Object>,int32,class System.Threading.Tasks.Task&,bool&,bool,bool,class System.String)
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.SqlCommand.RunExecuteReader(value class System.Data.CommandBehavior,value class Microsoft.Data.SqlClient.RunBehavior,bool,class System.String)
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.SqlCommand.ExecuteReader(value class System.Data.CommandBehavior)
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.SqlCommand.ExecuteReader()
+  SqlLineDebugger!SqlLineDebugger.NativeDebugSession.Execute(class System.String,bool)
+  SqlLineDebugger!SqlLineDebugger.NativeDebugSession+<>c__DisplayClass37_0.<RunAsync>b__0()
+  System.Private.CoreLib.il!System.Threading.ExecutionContext.RunFromThreadPoolDispatchLoop(class System.Threading.Thread,class System.Threading.ExecutionContext,class System.Threading.ContextCallback,class System.Object)
+  System.Private.CoreLib.il!System.Threading.Tasks.Task.ExecuteWithThreadLocal(class System.Threading.Tasks.Task&,class System.Threading.Thread)
+  System.Private.CoreLib.il!System.Threading.ThreadPoolWorkQueue.Dispatch()
+  System.Private.CoreLib.il!System.Threading.PortableThreadPool+WorkerThread.WorkerThreadStart()
+
+Thread (0x1080):
+  [Native Frames]
+  System.Private.CoreLib.il!System.Threading.Monitor.Wait(class System.Object,int32)
+  System.Private.CoreLib.il!System.Threading.ManualResetEventSlim.Wait(int32,value class System.Threading.CancellationToken)
+  System.Private.CoreLib.il!System.Threading.Tasks.Task.SpinThenBlockingWait(int32,value class System.Threading.CancellationToken)
+  System.Private.CoreLib.il!System.Threading.Tasks.Task.InternalWaitCore(int32,value class System.Threading.CancellationToken)
+  System.Private.CoreLib.il!System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(class System.Threading.Tasks.Task,value class System.Threading.Tasks.ConfigureAwaitOptions)
+  System.Private.CoreLib.il!System.Runtime.CompilerServices.TaskAwaiter`1[System.__Canon].GetResult()
+  SqlLineDebugger!SqlLineDebugger.DebugWorker+<>c__DisplayClass0_0.<Run>b__5()
+  System.Private.CoreLib.il!System.Threading.ExecutionContext.RunInternal(class System.Threading.ExecutionContext,class System.Threading.ContextCallback,class System.Object)
+  System.Private.CoreLib.il!System.Threading.Tasks.Task.ExecuteWithThreadLocal(class System.Threading.Tasks.Task&,class System.Threading.Thread)
+
+Thread (0x816C):
+  [Native Frames]
+  System.Private.CoreLib.il!System.Threading.WaitHandle.WaitOneNoCheck(int32)
+  System.Private.CoreLib.il!System.Threading.TimerQueue.TimerThread()
+
+Thread (0x6F98):
+  [Native Frames]
+  Microsoft.Data.SqlClient!Interop.Windows.Sni.SniNativeMethods.SniReadSyncOverAsync(class Microsoft.Data.SqlClient.SNIHandle,int&,int32)
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.SniNativeWrapper.SniReadSyncOverAsync(class Microsoft.Data.SqlClient.SNIHandle,int&,int32)
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.TdsParserStateObjectNative.ReadSyncOverAsync(int32,unsigned int32&)
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.TdsParserStateObject.ReadSniSyncOverAsync()
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.TdsParserStateObject.TryReadNetworkPacket()
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.TdsParserStateObject.TryPrepareBuffer()
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.TdsParserStateObject.TryReadByte(unsigned int8&)
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.TdsParser.TryRun(value class Microsoft.Data.SqlClient.RunBehavior,class Microsoft.Data.SqlClient.SqlCommand,class Microsoft.Data.SqlClient.SqlDataReader,class Microsoft.Data.SqlClient.BulkCopySimpleResultSet,class Microsoft.Data.SqlClient.TdsParserStateObject,bool&)
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.SqlDataReader.TryConsumeMetaData()
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.SqlDataReader.get_MetaData()
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.SqlCommand.FinishExecuteReader(class Microsoft.Data.SqlClient.SqlDataReader,value class Microsoft.Data.SqlClient.RunBehavior,class System.String,bool,bool,bool)
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.SqlCommand.RunExecuteReaderTds(value class System.Data.CommandBehavior,value class Microsoft.Data.SqlClient.RunBehavior,bool,bool,int32,class System.Threading.Tasks.Task&,bool,bool,class Microsoft.Data.SqlClient.SqlDataReader,bool)
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.SqlCommand.RunExecuteReader(value class System.Data.CommandBehavior,value class Microsoft.Data.SqlClient.RunBehavior,bool,class System.Threading.Tasks.TaskCompletionSource`1<class System.Object>,int32,class System.Threading.Tasks.Task&,bool&,bool,bool,class System.String)
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.SqlCommand.RunExecuteReader(value class System.Data.CommandBehavior,value class Microsoft.Data.SqlClient.RunBehavior,bool,class System.String)
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.SqlCommand.ExecuteScalar()
+  SqlLineDebugger!SqlLineDebugger.SqlCatalog.LoadSource(class Microsoft.Data.SqlClient.SqlConnection,class System.String,int32,class System.String,class System.Collections.Generic.IReadOnlyList`1<class SqlLineDebugger.StatementSpan>)
+  SqlLineDebugger!SqlLineDebugger.NativeDebugSession.HandleEvent(class System.String)
+  SqlLineDebugger!SqlLineDebugger.NativeDebugSession.ProcessNativeEvents()
+  System.Private.CoreLib.il!System.Threading.ExecutionContext.RunInternal(class System.Threading.ExecutionContext,class System.Threading.ContextCallback,class System.Object)
+  System.Private.CoreLib.il!System.Threading.Tasks.Task.ExecuteWithThreadLocal(class System.Threading.Tasks.Task&,class System.Threading.Thread)
+

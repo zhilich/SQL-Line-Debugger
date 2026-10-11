@@ -1,0 +1,120 @@
+TEST into
+Connected to (localdb)\mssqllocaldb / tempdb, SQL 15.00.4382.
+Debug target SPID 60.
+Worker batch=0 id=0 level=0
+PAUSE level=0 Break Query:2 bytes=112-266 sql=EXEC tempdb.dbo.[SqlLineDemo_7aef6222a3f54abb801c96d3d34f6710_Outer] @seed = 7
+PAUSE level=1 Step SqlLineDemo_7aef6222a3f54abb801c96d3d34f6710_Outer:3 bytes=198-238 sql=SET NOCOUNT ON;     
+PAUSE level=1 Step SqlLineDemo_7aef6222a3f54abb801c96d3d34f6710_Outer:4 bytes=240-332 sql=DECLARE @number int = @seed, @result int;     
+PAUSE level=1 Step SqlLineDemo_7aef6222a3f54abb801c96d3d34f6710_Outer:5 bytes=334-492 sql=SET @number = dbo.[SqlLineDemo_7aef6222a3f54abb801c96d3d34f6710_Double](@number)
+PAUSE level=2 Step SqlLineDemo_7aef6222a3f54abb801c96d3d34f6710_Double:4 bytes=278-338 sql=SET @answer = @value * 2;     
+PAUSE level=2 Step SqlLineDemo_7aef6222a3f54abb801c96d3d34f6710_Double:5 bytes=340-366 sql=RETURN @answer
+PAUSE level=1 Step SqlLineDemo_7aef6222a3f54abb801c96d3d34f6710_Outer:6 bytes=508-676 sql=EXEC dbo.[SqlLineDemo_7aef6222a3f54abb801c96d3d34f6710_Inner] @number, @result OUTPUT
+PAUSE level=2 Step SqlLineDemo_7aef6222a3f54abb801c96d3d34f6710_Inner:3 bytes=240-300 sql=SET @result = @value + 3;     
+PAUSE level=2 Step SqlLineDemo_7aef6222a3f54abb801c96d3d34f6710_Inner:4 bytes=302-372 sql=PRINT N'Inner procedure complete'; 
+Inner procedure complete
+PAUSE level=1 Step SqlLineDemo_7aef6222a3f54abb801c96d3d34f6710_Outer:7 bytes=692-792 sql=PRINT N'Demo complete — expected result: 17';     
+Demo complete — expected result: 17
+PAUSE level=1 Step SqlLineDemo_7aef6222a3f54abb801c96d3d34f6710_Outer:8 bytes=794-910 sql=SELECT @seed AS Seed, @number AS Doubled, @result AS Result
+PAUSE level=1 Step SqlLineDemo_7aef6222a3f54abb801c96d3d34f6710_Outer:9 bytes=926-1000 sql=SELECT N'Second result set' AS Message
+Execution completed; 2 result set(s).
+PASS into
+TEST over
+Connected to (localdb)\mssqllocaldb / tempdb, SQL 15.00.4382.
+Debug target SPID 60.
+Worker batch=0 id=0 level=0
+PAUSE level=0 Break Query:2 bytes=112-266 sql=EXEC tempdb.dbo.[SqlLineDemo_7c6ce64e831046f295100e4980832074_Outer] @seed = 7
+Inner procedure complete
+Demo complete — expected result: 17
+Execution completed; 2 result set(s).
+PASS over
+TEST out
+Connected to (localdb)\mssqllocaldb / tempdb, SQL 15.00.4382.
+Debug target SPID 60.
+Worker batch=0 id=0 level=0
+PAUSE level=0 Break Query:2 bytes=112-266 sql=EXEC tempdb.dbo.[SqlLineDemo_2eca49b7cd584dacb15af0bf815c1972_Outer] @seed = 7
+PAUSE level=1 Step SqlLineDemo_2eca49b7cd584dacb15af0bf815c1972_Outer:3 bytes=198-238 sql=SET NOCOUNT ON;     
+PAUSE level=1 Step SqlLineDemo_2eca49b7cd584dacb15af0bf815c1972_Outer:4 bytes=240-332 sql=DECLARE @number int = @seed, @result int;     
+PAUSE level=1 Step SqlLineDemo_2eca49b7cd584dacb15af0bf815c1972_Outer:5 bytes=334-492 sql=SET @number = dbo.[SqlLineDemo_2eca49b7cd584dacb15af0bf815c1972_Double](@number)
+PAUSE level=2 Step SqlLineDemo_2eca49b7cd584dacb15af0bf815c1972_Double:4 bytes=278-338 sql=SET @answer = @value * 2;     
+PAUSE level=1 Step SqlLineDemo_2eca49b7cd584dacb15af0bf815c1972_Outer:6 bytes=508-676 sql=EXEC dbo.[SqlLineDemo_2eca49b7cd584dacb15af0bf815c1972_Inner] @number, @result OUTPUT
+PAUSE level=2 Step SqlLineDemo_2eca49b7cd584dacb15af0bf815c1972_Inner:3 bytes=240-300 sql=SET @result = @value + 3;     
+PAUSE level=2 Step SqlLineDemo_2eca49b7cd584dacb15af0bf815c1972_Inner:4 bytes=302-372 sql=PRINT N'Inner procedure complete'; 
+Inner procedure complete
+PAUSE level=1 Step SqlLineDemo_2eca49b7cd584dacb15af0bf815c1972_Outer:7 bytes=692-792 sql=PRINT N'Demo complete — expected result: 17';     
+Demo complete — expected result: 17
+PAUSE level=1 Step SqlLineDemo_2eca49b7cd584dacb15af0bf815c1972_Outer:8 bytes=794-910 sql=SELECT @seed AS Seed, @number AS Doubled, @result AS Result
+PAUSE level=1 Step SqlLineDemo_2eca49b7cd584dacb15af0bf815c1972_Outer:9 bytes=926-1000 sql=SELECT N'Second result set' AS Message
+Execution completed; 2 result set(s).
+PASS out
+TEST breakpoint
+Connected to (localdb)\mssqllocaldb / tempdb, SQL 15.00.4382.
+Debug target SPID 60.
+Worker batch=0 id=0 level=0
+PAUSE level=0 Break Query:2 bytes=112-266 sql=EXEC tempdb.dbo.[SqlLineDemo_5185fc0b6b2242919d1e88cb357545af_Outer] @seed = 7
+PAUSE level=2 Breakpoint SqlLineDemo_5185fc0b6b2242919d1e88cb357545af_Double:4 bytes=278-338 sql=SET @answer = @value * 2;     
+Inner procedure complete
+Demo complete — expected result: 17
+Execution completed; 2 result set(s).
+PASS breakpoint
+TEST line-breakpoint
+Connected to (localdb)\mssqllocaldb / tempdb, SQL 15.00.4382.
+Debug target SPID 60.
+Worker batch=0 id=0 level=0
+PAUSE level=0 Break Query:2 bytes=112-266 sql=EXEC tempdb.dbo.[SqlLineDemo_7a1c4f882b6046908a362eb646ee7040_Outer] @seed = 7
+PAUSE level=1 Breakpoint SqlLineDemo_7a1c4f882b6046908a362eb646ee7040_Outer:4 bytes=240-332 sql=DECLARE @number int = @seed, @result int;     
+Inner procedure complete
+Demo complete — expected result: 17
+Execution completed; 2 result set(s).
+PASS line-breakpoint
+TEST cancel
+Connected to (localdb)\mssqllocaldb / tempdb, SQL 15.00.4382.
+Debug target SPID 60.
+Worker batch=0 id=0 level=0
+PAUSE level=0 Break Query:2 bytes=112-266 sql=EXEC tempdb.dbo.[SqlLineDemo_0bf58edc835541fbb121965e5ede7ba3_Outer] @seed = 7
+Execution cancelled.
+PASS cancel
+TEST repeat
+Connected to (localdb)\mssqllocaldb / tempdb, SQL 15.00.4382.
+Debug target SPID 60.
+Worker batch=0 id=0 level=0
+PAUSE level=0 Break Query:2 bytes=112-266 sql=EXEC tempdb.dbo.[SqlLineDemo_0058cd1a1f7649b7b9217599b8a66063_Outer] @seed = 7
+PAUSE level=1 Step SqlLineDemo_0058cd1a1f7649b7b9217599b8a66063_Outer:3 bytes=198-238 sql=SET NOCOUNT ON;     
+PAUSE level=1 Step SqlLineDemo_0058cd1a1f7649b7b9217599b8a66063_Outer:4 bytes=240-332 sql=DECLARE @number int = @seed, @result int;     
+PAUSE level=1 Step SqlLineDemo_0058cd1a1f7649b7b9217599b8a66063_Outer:5 bytes=334-492 sql=SET @number = dbo.[SqlLineDemo_0058cd1a1f7649b7b9217599b8a66063_Double](@number)
+PAUSE level=2 Step SqlLineDemo_0058cd1a1f7649b7b9217599b8a66063_Double:4 bytes=278-338 sql=SET @answer = @value * 2;     
+PAUSE level=2 Step SqlLineDemo_0058cd1a1f7649b7b9217599b8a66063_Double:5 bytes=340-366 sql=RETURN @answer
+PAUSE level=1 Step SqlLineDemo_0058cd1a1f7649b7b9217599b8a66063_Outer:6 bytes=508-676 sql=EXEC dbo.[SqlLineDemo_0058cd1a1f7649b7b9217599b8a66063_Inner] @number, @result OUTPUT
+PAUSE level=2 Step SqlLineDemo_0058cd1a1f7649b7b9217599b8a66063_Inner:3 bytes=240-300 sql=SET @result = @value + 3;     
+PAUSE level=2 Step SqlLineDemo_0058cd1a1f7649b7b9217599b8a66063_Inner:4 bytes=302-372 sql=PRINT N'Inner procedure complete'; 
+Inner procedure complete
+PAUSE level=1 Step SqlLineDemo_0058cd1a1f7649b7b9217599b8a66063_Outer:7 bytes=692-792 sql=PRINT N'Demo complete — expected result: 17';     
+Demo complete — expected result: 17
+PAUSE level=1 Step SqlLineDemo_0058cd1a1f7649b7b9217599b8a66063_Outer:8 bytes=794-910 sql=SELECT @seed AS Seed, @number AS Doubled, @result AS Result
+PAUSE level=1 Step SqlLineDemo_0058cd1a1f7649b7b9217599b8a66063_Outer:9 bytes=926-1000 sql=SELECT N'Second result set' AS Message
+Execution completed; 2 result set(s).
+PASS repeat
+TEST long-pause
+Connected to (localdb)\mssqllocaldb / tempdb, SQL 15.00.4382.
+Debug target SPID 60.
+Worker batch=0 id=0 level=0
+PAUSE level=0 Break Query:2 bytes=112-266 sql=EXEC tempdb.dbo.[SqlLineDemo_4263bf4b2ff447c79727d00c4769028f_Outer] @seed = 7
+PAUSE level=1 Step SqlLineDemo_4263bf4b2ff447c79727d00c4769028f_Outer:3 bytes=198-238 sql=SET NOCOUNT ON;     
+PAUSE level=1 Step SqlLineDemo_4263bf4b2ff447c79727d00c4769028f_Outer:4 bytes=240-332 sql=DECLARE @number int = @seed, @result int;     
+PAUSE level=1 Step SqlLineDemo_4263bf4b2ff447c79727d00c4769028f_Outer:5 bytes=334-492 sql=SET @number = dbo.[SqlLineDemo_4263bf4b2ff447c79727d00c4769028f_Double](@number)
+PAUSE level=2 Step SqlLineDemo_4263bf4b2ff447c79727d00c4769028f_Double:4 bytes=278-338 sql=SET @answer = @value * 2;     
+Holding native pause for 30 seconds...
+PAUSE level=2 Step SqlLineDemo_4263bf4b2ff447c79727d00c4769028f_Double:5 bytes=340-366 sql=RETURN @answer
+PAUSE level=1 Step SqlLineDemo_4263bf4b2ff447c79727d00c4769028f_Outer:6 bytes=508-676 sql=EXEC dbo.[SqlLineDemo_4263bf4b2ff447c79727d00c4769028f_Inner] @number, @result OUTPUT
+PAUSE level=2 Step SqlLineDemo_4263bf4b2ff447c79727d00c4769028f_Inner:3 bytes=240-300 sql=SET @result = @value + 3;     
+PAUSE level=2 Step SqlLineDemo_4263bf4b2ff447c79727d00c4769028f_Inner:4 bytes=302-372 sql=PRINT N'Inner procedure complete'; 
+Inner procedure complete
+PAUSE level=1 Step SqlLineDemo_4263bf4b2ff447c79727d00c4769028f_Outer:7 bytes=692-792 sql=PRINT N'Demo complete — expected result: 17';     
+Demo complete — expected result: 17
+PAUSE level=1 Step SqlLineDemo_4263bf4b2ff447c79727d00c4769028f_Outer:8 bytes=794-910 sql=SELECT @seed AS Seed, @number AS Doubled, @result AS Result
+PAUSE level=1 Step SqlLineDemo_4263bf4b2ff447c79727d00c4769028f_Outer:9 bytes=926-1000 sql=SELECT N'Second result set' AS Message
+Execution completed; 2 result set(s).
+PASS long-pause
+PASS live Unicode / blank lines / multiline SQL / CRLF
+PASS live Unicode / blank lines / multiline SQL / LF
+PASS UTF-16 / CRLF / multiline / source hash / invalid span mapping
+ALL TESTS PASSED

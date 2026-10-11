@@ -1,0 +1,74 @@
+2026-10-09T04:28:17.8938522Z CoInitializeSecurity=0x00000000
+2026-10-09T04:28:17.9789418Z Connected SQL 15.00.4382
+2026-10-09T04:28:17.9789418Z Interface bytes=340
+2026-10-09T04:28:17.9789418Z CoUnmarshalInterface=0x00000000
+Native Register hr=00000000 serverPid=17604
+Native OnMatch pid=34476
+Native connection spid=59
+Native batch=0
+Native PushDynamic level=0 spans=3
+Request first break hr=00000000
+Native Step=1 batch=0 worker=0 level=0 reason=8 span=1:0-1128
+Native GetSyms hr=00000000 count=0
+Native Continue hr=00000000
+Native batch=0
+Native PushDynamic level=0 spans=1
+Request first break hr=00000000
+Native Step=2 batch=0 worker=0 level=0 reason=8 span=1:0-40
+Native GetSyms hr=00000000 count=0
+Native Continue hr=00000000
+Native Push #CodexDebugProbe________________________________________________________________________________________________________00000380 level=1
+Native Step=3 batch=0 worker=0 level=1 reason=1 span=3:86-144
+Native GetSyms hr=00000000 count=2
+Symbol depth=0 name=@probeScalar type=int flags=2 kind=0 value=
+Symbol depth=0 name=@probeTable type=table flags=2 kind=0 value=(table)
+Native Continue hr=00000000
+Native Step=4 batch=0 worker=0 level=1 reason=1 span=5:258-360
+Native GetSyms hr=00000000 count=2
+Symbol depth=0 name=@probeScalar type=int flags=2 kind=0 value=0
+Symbol depth=0 name=@probeTable type=table flags=2 kind=0 value=(table)
+Native Continue hr=00000000
+Native Step=5 batch=0 worker=0 level=1 reason=1 span=6:366-534
+Native GetSyms hr=00000000 count=2
+Symbol depth=0 name=@probeScalar type=int flags=2 kind=0 value=0
+Symbol depth=0 name=@probeTable type=table flags=2 kind=0 value=(table)
+Native Continue hr=00000000
+Native Step=6 batch=0 worker=0 level=1 reason=1 span=7:540-666
+Native GetSyms hr=00000000 count=2
+Symbol depth=0 name=@probeScalar type=int flags=2 kind=0 value=0
+Symbol depth=0 name=@probeTable type=table flags=2 kind=0 value=(table)
+Native Continue hr=00000000
+Native Step=7 batch=0 worker=0 level=1 reason=1 span=8:672-724
+Native GetSyms hr=00000000 count=2
+Symbol depth=0 name=@probeScalar type=int flags=2 kind=0 value=0
+Symbol depth=0 name=@probeTable type=table flags=2 kind=0 value=(table)
+Native Continue hr=00000000
+Native Step=8 batch=0 worker=0 level=1 reason=1 span=9:726-798
+Native GetSyms hr=00000000 count=2
+Symbol depth=0 name=@probeScalar type=int flags=2 kind=0 value=314159
+Symbol depth=0 name=@probeTable type=table flags=2 kind=0 value=(table)
+2026-10-09T04:28:18.0217731Z Storage candidate object=-1331457812 name=#B0A390EC
+2026-10-09T04:28:18.0217731Z Storage candidate object=-1315457755 name=#ProbeTemp__________________________________________________________________________________________________________000000000011
+2026-10-09T04:28:18.0360230Z STORAGE ROW object=-1331457812 page=1:408 Slot 0 Offset 0x60 Length 55 Slot 0 Column 1 Offset 0x4 Length 4 Length (physical) 4 Id=11
+2026-10-09T04:28:18.0360230Z STORAGE ROW object=-1331457812 page=1:408 Slot 0 Offset 0x60 Length 55 Slot 0 Column 2 Offset 0xf Length 40 Length (physical) 40 Label=table variable alpha
+2026-10-09T04:28:18.0463501Z STORAGE ROW object=-1331457812 page=1:408 Slot 1 Offset 0x97 Length 53 Slot 1 Column 1 Offset 0x4 Length 4 Length (physical) 4 Id=22
+2026-10-09T04:28:18.0463501Z STORAGE ROW object=-1331457812 page=1:408 Slot 1 Offset 0x97 Length 53 Slot 1 Column 2 Offset 0xf Length 38 Length (physical) 38 Label=table variable beta
+2026-10-09T04:28:18.0463501Z STORAGE ROW object=-1315457755 page=1:416 Slot 0 Offset 0x60 Length 35 Slot 0 Column 1 Offset 0x4 Length 4 Length (physical) 4 Id=33
+2026-10-09T04:28:18.0463501Z STORAGE ROW object=-1315457755 page=1:416 Slot 0 Offset 0x60 Length 35 Slot 0 Column 2 Offset 0xf Length 20 Length (physical) 20 Label=temp alpha
+2026-10-09T04:28:18.0463501Z STORAGE ROW object=-1315457755 page=1:416 Slot 1 Offset 0x83 Length 33 Slot 1 Column 1 Offset 0x4 Length 4 Length (physical) 4 Id=44
+2026-10-09T04:28:18.0463501Z STORAGE ROW object=-1315457755 page=1:416 Slot 1 Offset 0x83 Length 33 Slot 1 Column 2 Offset 0xf Length 18 Length (physical) 18 Label=temp beta
+2026-10-09T04:28:18.0463501Z PAUSED STORAGE VERIFICATION=True
+GetGlobalSym name=@@SPID hr=00000000
+Symbol depth=0 name=@@SPID type=smallint flags=33 kind=0 value=59
+GetGlobalSym name=#ProbeTemp hr=80070057
+GetGlobalSym name=@probeTable hr=80070057
+Native Continue hr=00000000
+Native Step=9 batch=0 worker=0 level=1 reason=1 span=10:800-1118
+Native GetSyms hr=00000000 count=2
+Symbol depth=0 name=@probeScalar type=int flags=2 kind=0 value=314160
+Symbol depth=0 name=@probeTable type=table flags=2 kind=0 value=(table)
+Native Continue hr=00000000
+2026-10-09T04:28:18.0524588Z Fixture control result scalar=314160 tableVariableRows=2 tempTableRows=2
+Native StopDebugging=00000000
+Native Unregister=00000000
+RESULT steps=9 markerSeen=1 tableSymbols=7 tableChildren=0

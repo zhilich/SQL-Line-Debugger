@@ -1,0 +1,1 @@
+PASS: 240-line CRLF/Unicode source; unchanged source refresh preserves viewport and updates spans; five visible steps stay still; off-screen step scrolls into view; old highlight clears.

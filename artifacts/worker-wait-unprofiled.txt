@@ -1,0 +1,68 @@
+Thread (0x8C40):
+  [Native Frames]
+  System.Private.CoreLib.il!System.Threading.Monitor.Wait(class System.Object,int32)
+  System.Private.CoreLib.il!System.Threading.ManualResetEventSlim.Wait(int32,value class System.Threading.CancellationToken)
+  System.Private.CoreLib.il!System.Threading.Tasks.Task.SpinThenBlockingWait(int32,value class System.Threading.CancellationToken)
+  System.Private.CoreLib.il!System.Threading.Tasks.Task.InternalWaitCore(int32,value class System.Threading.CancellationToken)
+  System.Private.CoreLib.il!System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(class System.Threading.Tasks.Task,value class System.Threading.Tasks.ConfigureAwaitOptions)
+  SqlLineDebugger!SqlLineDebugger.DebugWorker.Run(class System.String)
+  SqlLineDebugger!SqlLineDebugger.Program.Main(class System.String[])
+
+Thread (0x6C70):
+  [Native Frames]
+  System.IO.Pipes.il!Interop+Kernel32.ReadFile(class System.Runtime.InteropServices.SafeHandle,unsigned int8*,int32,int32&,int)
+  System.IO.Pipes.il!System.IO.Pipes.PipeStream.ReadCore(value class System.Span`1<unsigned int8>)
+  System.IO.Pipes.il!System.IO.Pipes.PipeStream.Read(unsigned int8[],int32,int32)
+  System.Private.CoreLib.il!System.IO.StreamReader.ReadBuffer()
+  System.Private.CoreLib.il!System.IO.StreamReader.ReadLine()
+  SqlLineDebugger!SqlLineDebugger.DebugWorker+<>c__DisplayClass0_0.<Run>b__5()
+  System.Private.CoreLib.il!System.Threading.ExecutionContext.RunInternal(class System.Threading.ExecutionContext,class System.Threading.ContextCallback,class System.Object)
+  System.Private.CoreLib.il!System.Threading.Tasks.Task.ExecuteWithThreadLocal(class System.Threading.Tasks.Task&,class System.Threading.Thread)
+
+Thread (0x8444):
+  [Native Frames]
+  Microsoft.Data.SqlClient!Interop.Windows.Sni.SniNativeMethods.SniReadSyncOverAsync(class Microsoft.Data.SqlClient.SNIHandle,int&,int32)
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.SniNativeWrapper.SniReadSyncOverAsync(class Microsoft.Data.SqlClient.SNIHandle,int&,int32)
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.TdsParserStateObjectNative.ReadSyncOverAsync(int32,unsigned int32&)
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.TdsParserStateObject.ReadSniSyncOverAsync()
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.TdsParserStateObject.TryReadNetworkPacket()
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.TdsParserStateObject.TryPrepareBuffer()
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.TdsParserStateObject.TryReadByte(unsigned int8&)
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.TdsParser.TryRun(value class Microsoft.Data.SqlClient.RunBehavior,class Microsoft.Data.SqlClient.SqlCommand,class Microsoft.Data.SqlClient.SqlDataReader,class Microsoft.Data.SqlClient.BulkCopySimpleResultSet,class Microsoft.Data.SqlClient.TdsParserStateObject,bool&)
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.SqlDataReader.TryConsumeMetaData()
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.SqlDataReader.get_MetaData()
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.SqlCommand.FinishExecuteReader(class Microsoft.Data.SqlClient.SqlDataReader,value class Microsoft.Data.SqlClient.RunBehavior,class System.String,bool,bool,bool)
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.SqlCommand.RunExecuteReaderTds(value class System.Data.CommandBehavior,value class Microsoft.Data.SqlClient.RunBehavior,bool,bool,int32,class System.Threading.Tasks.Task&,bool,bool,class Microsoft.Data.SqlClient.SqlDataReader,bool)
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.SqlCommand.RunExecuteReader(value class System.Data.CommandBehavior,value class Microsoft.Data.SqlClient.RunBehavior,bool,class System.Threading.Tasks.TaskCompletionSource`1<class System.Object>,int32,class System.Threading.Tasks.Task&,bool&,bool,bool,class System.String)
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.SqlCommand.RunExecuteReader(value class System.Data.CommandBehavior,value class Microsoft.Data.SqlClient.RunBehavior,bool,class System.String)
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.SqlCommand.ExecuteReader(value class System.Data.CommandBehavior)
+  Microsoft.Data.SqlClient!Microsoft.Data.SqlClient.SqlCommand.ExecuteReader()
+  SqlLineDebugger!SqlLineDebugger.NativeDebugSession.Execute(class System.String,bool)
+  SqlLineDebugger!SqlLineDebugger.NativeDebugSession+<>c__DisplayClass36_0.<RunAsync>b__0()
+  System.Private.CoreLib.il!System.Threading.ExecutionContext.RunFromThreadPoolDispatchLoop(class System.Threading.Thread,class System.Threading.ExecutionContext,class System.Threading.ContextCallback,class System.Object)
+  System.Private.CoreLib.il!System.Threading.Tasks.Task.ExecuteWithThreadLocal(class System.Threading.Tasks.Task&,class System.Threading.Thread)
+  System.Private.CoreLib.il!System.Threading.ThreadPoolWorkQueue.Dispatch()
+  System.Private.CoreLib.il!System.Threading.PortableThreadPool+WorkerThread.WorkerThreadStart()
+
+Thread (0x9BD8):
+  [Native Frames]
+  System.Private.CoreLib.il!System.Threading.WaitHandle.WaitOneNoCheck(int32)
+  System.Private.CoreLib.il!System.Threading.PortableThreadPool+GateThread.GateThreadStart()
+
+Thread (0x3394):
+  [Native Frames]
+  System.Private.CoreLib.il!System.Threading.WaitHandle.WaitOneNoCheck(int32)
+  System.Private.CoreLib.il!System.Threading.TimerQueue.TimerThread()
+
+Thread (0x64D8):
+  CPU_TIME
+  System.Private.CoreLib.il!Interop+Kernel32.GetCurrentProcessorNumberEx(value class PROCESSOR_NUMBER&)
+  System.Private.CoreLib.il!System.Threading.Thread.GetCurrentProcessorNumber()
+  System.Private.CoreLib.il!System.Buffers.SharedArrayPool`1[System.Byte].Rent(int32)
+  System.Text.Json.il!System.Text.Json.JsonDocument+MetadataDb.Enlarge()
+  System.Text.Json.il!System.Text.Json.JsonDocument.Parse(value class System.ReadOnlySpan`1<unsigned int8>,value class System.Text.Json.JsonReaderOptions,value class MetadataDb&,value class StackRowStack&)
+  System.Text.Json.il!System.Text.Json.JsonDocument.Parse(value class System.ReadOnlyMemory`1<unsigned int8>,value class System.Text.Json.JsonReaderOptions,unsigned int8[],class System.Text.Json.PooledByteBufferWriter)
+  System.Text.Json.il!System.Text.Json.JsonDocument.Parse(value class System.ReadOnlyMemory`1<wchar>,value class System.Text.Json.JsonDocumentOptions)
+  System.Text.Json.il!System.Text.Json.JsonDocument.Parse(class System.String,value class System.Text.Json.JsonDocumentOptions)
+  SqlLineDebugger!SqlLineDebugger.NativeDebugSession.HandleEvent(class System.String)
+

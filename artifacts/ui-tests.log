@@ -1,0 +1,8 @@
+PASS: Windows Forms created, nested function source highlighted, @answer=14 displayed, gutter breakpoint toggled, two result-set grids displayed.
+Step latencies (ms): 30.1, 6.6, 1.7, 5.8, 6.5, 3.7, 16.1, 4.3, 10.8, 4.2, 8.1
+[10:32:25] Connected to (localdb)\mssqllocaldb / tempdb, SQL 15.00.4382.
+[10:32:26] Debug target SPID 62.
+[10:32:26] Worker batch=0 id=0 level=0
+[10:32:26] Inner procedure complete
+[10:32:26] Demo complete — expected result: 17
+[10:32:26] Execution completed; 2 result set(s).

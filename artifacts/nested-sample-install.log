@@ -1,0 +1,11 @@
+ProcedureName                                                                                                                    SqlBytes            
+-------------------------------------------------------------------------------------------------------------------------------- --------------------
+AssessRisk                                                                                                                                       2203
+BuildOrders                                                                                                                                      2182
+CalculateDiscount                                                                                                                                2413
+PriceLine                                                                                                                                        2384
+ProcessOrder                                                                                                                                     2669
+Run                                                                                                                                              4587
+TotalSqlBytes       
+--------------------
+               16438
