@@ -42,6 +42,15 @@ internal static class IntegrationTests
                     if (snapshot.Level == 0) Require(snapshot.Source.Statement(snapshot.Span).TrimEnd(';').EndsWith("= 7", StringComparison.Ordinal), "inclusive end maps the final query token");
                     if (snapshot.Source.Statement(snapshot.Span).StartsWith("RETURN")) Require(snapshot.Source.Statement(snapshot.Span).TrimEnd(';').EndsWith("@answer", StringComparison.Ordinal), "inclusive end maps final RETURN token");
                     Require(snapshots.Count < 100, "bounded stepping");
+                    Require(snapshot.Stack[0].Span == snapshot.Span, "top frame carries current statement");
+                    foreach (var caller in snapshot.Stack.Skip(1))
+                    {
+                        Require(caller.Span != null, "caller carries suspended statement");
+                        string callSite = caller.Source.Statement(caller.Span!).Trim();
+                        Require(caller.Level == 0 ? callSite.StartsWith("EXEC") :
+                            caller.Source.StatementLine(caller.Span!) == (snapshot.Source.Name.EndsWith("_Double") ? 5 : 6),
+                            "caller position stays on the function/procedure call site, including hidden Continue steps");
+                    }
                     if (mode == "cancel") { session.Stop(); return; }
                     if (mode == "long-pause" && snapshot.Source.Name.EndsWith("_Double") && !longPauseRequested)
                     {

@@ -23,7 +23,7 @@ public sealed record SourceDocument(string Key, string Name, string Database, st
     public string Statement(StatementSpan span) { var r = Range(span); return Text.Substring(r.Start, r.Length); }
     public int StatementLine(StatementSpan span) => LineAt(Range(span).Start);
 }
-public sealed record StackFrame(int Level, SourceDocument Source);
+public sealed record StackFrame(int Level, SourceDocument Source, StatementSpan? Span = null);
 public sealed record PauseSnapshot(SourceDocument Source, StatementSpan Span, int Level, IReadOnlyList<VariableValue> Variables,
     IReadOnlyList<StackFrame> Stack, string Reason, int Spid)
 {

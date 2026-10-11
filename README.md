@@ -28,6 +28,8 @@ Submit a single SQL batch; `GO` is a client batch separator and is not accepted.
 
 Close source tabs with their **×** button or **Ctrl+W**. Closing a tab preserves its breakpoints and Query edits. Single-click a **Call Stack** frame to open its source again; the paused frame also restores its statement marker. **Show Query** reopens your batch with its edits; **Open SQL** reopens Query when loading a script.
 
+The active frame has a yellow statement highlight and arrow. Caller frames show their suspended call site in green, including after reopening a closed tab. Selecting a recursive caller displays that invocation's own call site.
+
 | Action | Shortcut |
 | --- | --- |
 | Start / Continue | F5 |

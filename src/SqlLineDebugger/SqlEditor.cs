@@ -12,6 +12,9 @@ internal sealed class SqlEditor : UserControl
     public SourceDocument Source { get; private set; }
     private int currentLine = -1;
     private int highlightStart, highlightLength;
+    private bool suspendedFrame;
+    internal static readonly Color ActiveMarkerColor = Color.FromArgb(255, 239, 156);
+    internal static readonly Color CallerMarkerColor = Color.FromArgb(220, 242, 220);
     [DllImport("user32.dll", EntryPoint = "SendMessageW")]
     private static extern IntPtr SendMessage(IntPtr window, int message, IntPtr wParam, IntPtr lParam);
     [DllImport("user32.dll", EntryPoint = "SendMessageW")]
@@ -63,7 +66,7 @@ internal sealed class SqlEditor : UserControl
         RefreshQuery();
         if (line > 0 && line <= TextBox.Lines.Length) { breakpoints.Toggle(Source, line); margin.Invalidate(); BreakpointsChanged?.Invoke(); }
     }
-    public void Highlight(StatementSpan span)
+    public void Highlight(StatementSpan span, bool suspended = false, bool revealCaret = true)
     {
         var range = Source.Range(span);
         int start = Display(Source.Text[..range.Start]).Length;
@@ -73,10 +76,11 @@ internal sealed class SqlEditor : UserControl
         UpdateFormatting(() =>
         {
             ClearPreviousHighlight();
-            TextBox.Select(start, length); TextBox.SelectionBackColor = Color.FromArgb(255, 239, 156);
+            TextBox.Select(start, length); TextBox.SelectionBackColor = suspended ? CallerMarkerColor : ActiveMarkerColor;
+            suspendedFrame = suspended;
             highlightStart = start; highlightLength = length;
             TextBox.Select(start, 0); currentLine = Source.StatementLine(span);
-        }, revealCaret: true);
+        }, revealCaret: revealCaret);
     }
     public void ClearHighlight()
     {
@@ -131,7 +135,8 @@ internal sealed class SqlEditor : UserControl
             if (position.Y < -TextBox.Font.Height || position.Y > Height) continue;
             e.Graphics.DrawString((line + 1).ToString(), TextBox.Font, brush, 27, position.Y);
             if (points.Contains(line + 1)) e.Graphics.FillEllipse(Brushes.Firebrick, 7, position.Y + 3, 12, 12);
-            if (line + 1 == currentLine) e.Graphics.FillPolygon(Brushes.DarkGoldenrod, new[] { new Point(3, position.Y + 1), new Point(22, position.Y + 9), new Point(3, position.Y + 17) });
+            if (line + 1 == currentLine) e.Graphics.FillPolygon(suspendedFrame ? Brushes.ForestGreen : Brushes.DarkGoldenrod,
+                new[] { new Point(3, position.Y + 1), new Point(22, position.Y + 9), new Point(3, position.Y + 17) });
         }
     }
 }

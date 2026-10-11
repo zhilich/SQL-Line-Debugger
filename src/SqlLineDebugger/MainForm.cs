@@ -106,16 +106,16 @@ internal sealed class MainForm : Form
         editors.Remove(editor.Source.Key);
         editor.BreakpointsChanged -= UpdateBreakpoints;
         // Retain the editable batch even when its tab is closed.
-        if (editor == query) page.Controls.Remove(query);
+        if (editor == query) { query.ClearHighlight(); page.Controls.Remove(query); }
         sourceTabs.TabPages.Remove(page);
         page.Dispose();
     }
     private void OpenStackFrame(int index)
     {
         if (index >= 0 && index < stack.Items.Count && stack.Items[index] is FrameItem item)
-            ShowSource(item.Frame.Source);
+            ShowSource(item.Frame.Source, item.Frame);
     }
-    private SqlEditor ShowSource(SourceDocument source)
+    private SqlEditor ShowSource(SourceDocument source, StackFrame? frame = null)
     {
         if (!editors.TryGetValue(source.Key, out var editor))
         {
@@ -130,9 +130,16 @@ internal sealed class MainForm : Form
         }
         else if (editor != query) editor.LoadSource(source);
         sourceTabs.SelectedTab = sourceTabs.TabPages.Cast<TabPage>().First(p => p.Controls.Contains(editor));
-        if (session?.IsPaused == true && currentPause is { } pause && pause.Source.Key == source.Key)
-            editor.Highlight(pause.Span);
+        ApplyFrameMarker(editor, frame);
         return editor;
+    }
+    private void ApplyFrameMarker(SqlEditor editor, StackFrame? frame = null, bool revealCaret = true)
+    {
+        if (session?.IsPaused != true || currentPause is not { } pause) return;
+        frame ??= pause.Stack.FirstOrDefault(f => f.Source.Key == editor.Source.Key && f.Source.Hash == editor.Source.Hash);
+        if (frame?.Span is { } span && frame.Source.Hash == editor.Source.Hash)
+            editor.Highlight(span, suspended: frame.Level != pause.Level, revealCaret: revealCaret);
+        else editor.ClearHighlight();
     }
     private void UpdateBreakpoints()
     {
@@ -174,10 +181,9 @@ internal sealed class MainForm : Form
         {
             if (pendingStep != 0) { stepTimes.Add(Stopwatch.GetElapsedTime(pendingStep).TotalMilliseconds); pendingStep = 0; }
             DebugTrace.Write("UI pause begin " + snapshot.Source.DisplayName + ":" + snapshot.Line);
+            currentPause = snapshot;
             var active = ShowSource(snapshot.Source);
-            foreach (var editor in editors.Values) if (editor != active) editor.ClearHighlight();
-            DebugTrace.Write("UI clear highlights end");
-            active.Highlight(snapshot.Span);
+            foreach (var editor in editors.Values) if (editor != active) ApplyFrameMarker(editor, revealCaret: false);
             DebugTrace.Write("UI show/highlight source end");
             locals.DataSource = snapshot.Variables.OrderBy(v => v.Name, StringComparer.OrdinalIgnoreCase)
                 .Select(v => new { v.Name, v.Type, v.Value }).ToList();
@@ -185,7 +191,6 @@ internal sealed class MainForm : Form
             status.Text = $"{snapshot.Reason} • {snapshot.Source.Database}.{snapshot.Source.DisplayName} • Line {snapshot.Line} • SPID {snapshot.Spid}";
             UpdateState();
             DebugTrace.Write("UI pause display complete");
-            currentPause = snapshot;
             if (smokeDirectory != null)
             {
                 if (snapshot.Source.Name.EndsWith("_Outer", StringComparison.Ordinal) && snapshot.Line == 4)
@@ -222,6 +227,7 @@ internal sealed class MainForm : Form
         {
             currentPause = null;
             query.TextBox.ReadOnly = false;
+            query.ClearHighlight();
             foreach (var editor in editors.Values) editor.ClearHighlight();
             locals.DataSource = null; stack.Items.Clear(); UpdateState();
             if (closing) Close();
@@ -272,6 +278,7 @@ internal sealed class MainForm : Form
         SavePreview(Path.Combine(directory, "debugger-results.png"));
         File.WriteAllText(Path.Combine(directory, "ui-tests.log"), "PASS: Windows Forms created, nested function source highlighted, @answer=14 displayed, gutter breakpoint toggled, two result-set grids displayed.\n" +
             "PASS: source tab close buttons, single-click call-stack reopening, repeated click on selected frame, preserved breakpoint and statement marker, Query text retained.\n" +
+            "PASS: suspended caller call-site highlight and gutter arrow are green; active frame remains yellow; reopened caller retains its marker.\n" +
             "Step latencies (ms): " + string.Join(", ", stepTimes.Select(ms => ms.ToString("F1"))) + "\n" + output.Text);
         return 0;
     }
@@ -285,16 +292,29 @@ internal sealed class MainForm : Form
         int caller = snapshot.Stack.ToList().FindIndex(f => f.Source.Key != snapshot.Source.Key);
         if (caller < 0) throw new InvalidOperationException("Missing caller frame for tab navigation test.");
         CheckFrame(caller);
+        CheckMarker(snapshot.Stack[caller], SqlEditor.CallerMarkerColor, Color.ForestGreen);
+        SavePreview(Path.Combine(smokeDirectory!, "debugger-caller.png"));
         int current = snapshot.Stack.ToList().FindIndex(f => f.Source.Key == snapshot.Source.Key);
         CheckFrame(current);
         CheckFrame(current);
-        var editor = ActiveEditor!;
-        int position = editor.TextBox.SelectionStart;
-        editor.TextBox.Select(position, 1);
-        if (editor.TextBox.SelectionBackColor != Color.FromArgb(255, 239, 156))
-            throw new InvalidOperationException("Reopened paused frame lost its statement marker.");
-        editor.TextBox.Select(position, 0);
+        CheckMarker(snapshot.Stack[current], SqlEditor.ActiveMarkerColor, Color.DarkGoldenrod);
         inspection.SelectedTab = previous;
+
+        void CheckMarker(StackFrame frame, Color background, Color arrow)
+        {
+            if (frame.Span is not { } span) throw new InvalidOperationException("Missing call-stack position.");
+            var editor = ActiveEditor!;
+            int position = SqlEditor.Display(frame.Source.Text[..frame.Source.Range(span).Start]).Length;
+            editor.TextBox.Select(position, 1);
+            if (editor.TextBox.SelectionBackColor != background)
+                throw new InvalidOperationException("Call-stack frame has the wrong statement marker color.");
+            editor.TextBox.Select(position, 0);
+            int y = editor.TextBox.GetPositionFromCharIndex(position).Y;
+            using var bitmap = new Bitmap(editor.Width, editor.Height);
+            editor.DrawToBitmap(bitmap, editor.ClientRectangle);
+            if (bitmap.GetPixel(6, y + 8).ToArgb() != arrow.ToArgb())
+                throw new InvalidOperationException("Call-stack frame has the wrong gutter marker color.");
+        }
 
         void CheckFrame(int index)
         {

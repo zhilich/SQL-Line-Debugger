@@ -1,9 +1,10 @@
 PASS: Windows Forms created, nested function source highlighted, @answer=14 displayed, gutter breakpoint toggled, two result-set grids displayed.
 PASS: source tab close buttons, single-click call-stack reopening, repeated click on selected frame, preserved breakpoint and statement marker, Query text retained.
-Step latencies (ms): 48.6, 3.6, 3.8, 9.3, 10.4, 9.7, 9.7, 7.8, 4.4, 6.2, 12.3
-[11:49:17] Connected to (localdb)\mssqllocaldb / tempdb, SQL 15.00.4382.
-[11:49:17] Debug target SPID 69.
-[11:49:17] Worker batch=0 id=0 level=0
-[11:49:18] Inner procedure complete
-[11:49:18] Demo complete — expected result: 17
-[11:49:18] Execution completed; 2 result set(s).
+PASS: suspended caller call-site highlight and gutter arrow are green; active frame remains yellow; reopened caller retains its marker.
+Step latencies (ms): 49.2, 4.2, 8.0, 2.8, 10.1, 14.2, 6.3, 10.2, 2.7, 4.6, 13.0
+[12:00:06] Connected to (localdb)\mssqllocaldb / tempdb, SQL 15.00.4382.
+[12:00:07] Debug target SPID 67.
+[12:00:07] Worker batch=0 id=0 level=0
+[12:00:07] Inner procedure complete
+[12:00:07] Demo complete — expected result: 17
+[12:00:08] Execution completed; 2 result set(s).

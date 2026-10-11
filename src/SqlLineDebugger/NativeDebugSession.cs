@@ -11,7 +11,7 @@ internal sealed class NativeDebugSession : IDisposable
     private readonly string connectionString;
     private readonly BreakpointStore breakpoints;
     private readonly object gate = new();
-    private readonly Dictionary<(int Batch, int Worker, int Level), SourceDocument> frames = new();
+    private readonly Dictionary<(int Batch, int Worker, int Level), StackFrame> frames = new();
     private SqlConnection? control;
     private SqlCommand? executingCommand;
     private volatile bool stopped, breakNext = true, paused;
@@ -202,16 +202,20 @@ internal sealed class NativeDebugSession : IDisposable
                     source = SqlCatalog.LoadSource(control!, e.GetProperty("db").GetString()!, e.GetProperty("oid").GetInt32(), e.GetProperty("name").GetString()!, spans);
                     DebugTrace.Write("LoadSource end");
                 }
-                frames[key] = source;
+                frames[key] = new StackFrame(level, source);
                 foreach (var span in spans) source.Range(span);
                 SourceLoaded?.Invoke(source);
                 return 0;
             }
             if (kind != "step") return 0;
             if (stopped) return 3;
-            if (!frames.TryGetValue(key, out var current)) throw new InvalidOperationException("No source frame for SQL debugger step.");
+            if (!frames.TryGetValue(key, out var frame)) throw new InvalidOperationException("No source frame for SQL debugger step.");
+            var current = frame.Source;
             var activeSpan = ReadSpan(e.GetProperty("span"));
             current.Range(activeSpan);
+            // Keep the caller's call site even when Continue/Step Over hides
+            // its steps. Each invocation has its own position, including recursion.
+            frames[key] = frame with { Span = activeSpan };
             var variables = e.GetProperty("variables").EnumerateArray().Select(v => new VariableValue(v.GetProperty("name").GetString()!,
                 v.GetProperty("type").GetString()!, v.GetProperty("value").GetString()!, v.GetProperty("flags").GetUInt32())).ToArray();
             bool breakpoint = breakpoints.Contains(current, activeSpan);
@@ -219,7 +223,7 @@ internal sealed class NativeDebugSession : IDisposable
             lock (gate) shouldPause = breakNext || breakpoint || action == DebugAction.Into || (action == DebugAction.Over && level <= originLevel) || (action == DebugAction.Out && level < originLevel);
             if (!shouldPause) return 0;
             var stack = frames.Where(f => f.Key.Batch == batch && f.Key.Worker == worker && f.Key.Level <= level)
-                .OrderByDescending(f => f.Key.Level).Select(f => new StackFrame(f.Key.Level, f.Value)).ToArray();
+                .OrderByDescending(f => f.Key.Level).Select(f => f.Value).ToArray();
             var snapshot = new PauseSnapshot(current, activeSpan, level, variables, stack, breakpoint ? "Breakpoint" : breakNext ? "Break" : "Step", spid);
             lock (gate)
             {
