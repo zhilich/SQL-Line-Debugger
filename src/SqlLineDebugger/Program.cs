@@ -34,11 +34,14 @@ internal static class Program
         {
             string directory = args.SkipWhile(a => a != "--output").Skip(1).FirstOrDefault() ?? "artifacts";
             form.Opacity = 0; form.ShowInTaskbar = false;
+            Exception? callbackError = null;
+            ThreadExceptionEventHandler errorHandler = (_, e) => { callbackError = e.Exception; form.Close(); };
+            Application.ThreadException += errorHandler;
             form.Shown += async (_, _) =>
             {
                 try { exitCode = await form.SmokeAsync(directory); }
-                catch (Exception ex) { Directory.CreateDirectory(directory); File.WriteAllText(Path.Combine(directory, "ui-tests.log"), ex.ToString()); exitCode = 1; }
-                finally { form.Close(); }
+                catch (Exception ex) { Directory.CreateDirectory(directory); File.WriteAllText(Path.Combine(directory, "ui-tests.log"), (callbackError ?? ex).ToString()); exitCode = 1; }
+                finally { Application.ThreadException -= errorHandler; form.Close(); }
             };
         }
         Application.Run(form);

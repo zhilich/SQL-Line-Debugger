@@ -67,7 +67,9 @@ internal sealed class SqlEditor : UserControl
     {
         var range = Source.Range(span);
         int start = Display(Source.Text[..range.Start]).Length;
-        int length = Display(Source.Text.Substring(range.Start, range.Length)).Length;
+        // SQL spans may end after the next line's indentation. Trim only the
+        // display highlight; retain original server offsets for source mapping.
+        int length = Display(Source.Text.Substring(range.Start, range.Length).TrimEnd()).Length;
         UpdateFormatting(() =>
         {
             ClearPreviousHighlight();

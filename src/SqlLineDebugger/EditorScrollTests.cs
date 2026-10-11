@@ -53,11 +53,47 @@ internal static class EditorScrollTests
             Require(text.SelectionBackColor == Color.White, "Previous statement highlight remained");
             text.Select(text.GetFirstCharIndexFromLine(219), 1);
             Require(text.SelectionBackColor == Color.FromArgb(255, 239, 156), "Current statement highlight missing");
-            File.WriteAllText(path, "PASS: 240-line CRLF/Unicode source; unchanged source refresh preserves viewport and updates spans; five visible steps stay still; off-screen step scrolls into view; old highlight clears.\n");
+            TestHighlightBoundaries(window);
+            File.WriteAllText(path, "PASS: 240-line CRLF/Unicode source; unchanged source refresh preserves viewport and updates spans; five visible steps stay still; off-screen step scrolls into view; old highlight clears.\nPASS: LF/CRLF statement markers exclude following whitespace and indentation while preserving multiline content and final tokens.\n");
             return 0;
         }
         catch (Exception ex) { File.WriteAllText(path, ex.ToString()); return 1; }
     }
     private static void Require(bool condition, string message)
     { if (!condition) throw new InvalidOperationException(message); }
+    private static void TestHighlightBoundaries(Form window)
+    {
+        foreach (string newline in new[] { "\n", "\r\n" })
+        {
+            string raw = $"-- Unicode \u03A9 \U0001F6F0{newline}DECLARE @number int = 7;{newline}    {newline}\t  SET @number = 14;{newline}SELECT{newline}    @number AS Value;{newline}    ";
+            var source = new SourceDocument("marker-test", "Marker", "Test", raw, Array.Empty<StatementSpan>());
+            using var editor = new SqlEditor(source, new BreakpointStore());
+            window.Controls.Add(editor); editor.BringToFront(); Application.DoEvents();
+            var text = editor.TextBox;
+            void RequireColor(int index, Color color, string reason)
+            { text.Select(index, 1); Require(text.SelectionBackColor == color, reason); }
+            Color marker = Color.FromArgb(255, 239, 156);
+            int declaration = raw.IndexOf("DECLARE", StringComparison.Ordinal);
+            int nextStatement = raw.IndexOf("SET", StringComparison.Ordinal);
+            // SQL can include all whitespace preceding the next statement.
+            editor.Highlight(new(0, declaration * 2, (nextStatement - 1) * 2));
+            string display = SqlEditor.Display(raw);
+            int declarationEnd = display.IndexOf(';') + 1;
+            RequireColor(declarationEnd - 1, marker, "DECLARE final semicolon lost its highlight");
+            int nextLineStart = display.IndexOf('\n', declarationEnd) + 1;
+            RequireColor(nextLineStart, Color.White, "Marker includes the following blank line");
+            int setStart = display.IndexOf("SET", StringComparison.Ordinal);
+            for (int index = display.LastIndexOf('\n', setStart) + 1; index <= setStart; index++)
+                RequireColor(index, Color.White, "Marker includes the next statement's indentation or token");
+
+            int selectStart = raw.IndexOf("SELECT", StringComparison.Ordinal);
+            editor.Highlight(new(1, selectStart * 2, (raw.Length - 1) * 2));
+            int continuation = display.LastIndexOf("@number", StringComparison.Ordinal);
+            RequireColor(continuation - 1, marker, "Multiline statement indentation lost its highlight");
+            int finalToken = display.LastIndexOf(';');
+            RequireColor(finalToken, marker, "Multiline statement final token lost its highlight");
+            for (int index = finalToken + 2; index < display.Length; index++)
+                RequireColor(index, Color.White, "Marker includes whitespace after the final statement");
+        }
+    }
 }

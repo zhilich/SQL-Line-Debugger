@@ -26,6 +26,8 @@ For your own code:
 
 Submit a single SQL batch; `GO` is a client batch separator and is not accepted. **Open SQL** loads a script and **Save SQL** saves the active source. Database module tabs are read-only.
 
+Close source tabs with their **×** button or **Ctrl+W**. Closing a tab preserves its breakpoints and Query edits. Single-click a **Call Stack** frame to open its source again; the paused frame also restores its statement marker. **Show Query** reopens your batch with its edits; **Open SQL** reopens Query when loading a script.
+
 | Action | Shortcut |
 | --- | --- |
 | Start / Continue | F5 |
@@ -34,6 +36,7 @@ Submit a single SQL batch; `GO` is a client batch separator and is not accepted.
 | Step Out | Shift+F11 |
 | Toggle breakpoint on current line | F9, or click the left gutter |
 | Stop / cancel execution | Shift+F5 |
+| Close active source tab | Ctrl+W |
 | Break at next statement boundary | Pause toolbar button |
 
 ## Source mapping

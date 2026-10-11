@@ -7,7 +7,7 @@ internal sealed class MainForm : Form
 {
     private readonly TextBox server = new() { Text = @"(localdb)\mssqllocaldb", Width = 220 };
     private readonly TextBox database = new() { Text = "tempdb", Width = 140 };
-    private readonly TabControl sourceTabs = new() { Dock = DockStyle.Fill };
+    private readonly ClosableTabControl sourceTabs = new() { Dock = DockStyle.Fill };
     private readonly TabControl bottomTabs = new() { Dock = DockStyle.Fill };
     private readonly TabControl resultTabs = new() { Dock = DockStyle.Fill };
     private readonly RichTextBox output = new() { Dock = DockStyle.Fill, ReadOnly = true, Font = new Font("Consolas", 10), BackColor = Color.FromArgb(247, 249, 252), BorderStyle = BorderStyle.None };
@@ -21,6 +21,7 @@ internal sealed class MainForm : Form
     private readonly Dictionary<string, SqlEditor> editors = new();
     private readonly SqlEditor query;
     private DebugSession? session;
+    private PauseSnapshot? currentPause;
     private bool closing;
     private bool loadingModules;
     private string? smokeDirectory;
@@ -51,6 +52,7 @@ internal sealed class MainForm : Form
         AddButton(ref loadButton, "Load Modules", async () => await LoadModules());
         AddButton(ref openButton, "Open SQL", OpenSql);
         var save = new ToolStripButton("Save SQL"); save.Click += (_, _) => SaveSql(); toolstrip.Items.Add(save);
+        var showQuery = new ToolStripButton("Show Query"); showQuery.Click += (_, _) => ShowQuery(); toolstrip.Items.Add(showQuery);
 
         var vertical = new SplitContainer { Dock = DockStyle.Fill, Orientation = Orientation.Horizontal, Height = 710, SplitterDistance = 430, Panel1MinSize = 180, Panel2MinSize = 160 };
         var horizontal = new SplitContainer { Dock = DockStyle.Fill, Width = 1260, SplitterDistance = 850, Panel1MinSize = 500, Panel2MinSize = 260 };
@@ -65,12 +67,15 @@ internal sealed class MainForm : Form
         toolstrip.Dock = DockStyle.Top;
         query = new SqlEditor(new("batch", "Query", "tempdb", "-- Enter a single batch, or click Demo.\nDECLARE @value int = 7;\nSET @value = @value * 2;\nPRINT N'Hello from SQL Server';\nSELECT @value AS Value;", Array.Empty<StatementSpan>()), breakpoints, true);
         AddEditor(query);
+        sourceTabs.CloseRequested += CloseSourceTab;
         modules.DoubleClick += (_, _) => { if (modules.SelectedItem is SourceDocument source) ShowSource(source); };
-        stack.DoubleClick += (_, _) => { if (stack.SelectedItem is FrameItem item) ShowSource(item.Frame.Source); };
+        stack.MouseDown += (_, e) => { if (e.Button == MouseButtons.Left) OpenStackFrame(stack.IndexFromPoint(e.Location)); };
+        stack.KeyDown += (_, e) => { if (e.KeyCode == Keys.Enter) { OpenStackFrame(stack.SelectedIndex); e.Handled = true; } };
         KeyPreview = true;
         KeyDown += async (_, e) =>
         {
-            if (e.KeyCode == Keys.F9) ActiveEditor?.ToggleAtCaret();
+            if (e.Control && e.KeyCode == Keys.W) { if (sourceTabs.SelectedTab is { } page) CloseSourceTab(page); }
+            else if (e.KeyCode == Keys.F9) ActiveEditor?.ToggleAtCaret();
             else if (e.KeyCode == Keys.F5 && e.Shift) Stop();
             else if (e.KeyCode == Keys.F5) { if (session?.IsRunning == true) session.Resume(DebugAction.Continue); else await Start(false); }
             else if (e.KeyCode == Keys.F10) session?.Resume(DebugAction.Over);
@@ -95,9 +100,29 @@ internal sealed class MainForm : Form
         editor.BreakpointsChanged += UpdateBreakpoints;
         sourceTabs.TabPages.Add(Page(editor.Source.DisplayName, editor));
     }
+    private void CloseSourceTab(TabPage page)
+    {
+        if (page.Controls.OfType<SqlEditor>().FirstOrDefault() is not { } editor) return;
+        editors.Remove(editor.Source.Key);
+        editor.BreakpointsChanged -= UpdateBreakpoints;
+        // Retain the editable batch even when its tab is closed.
+        if (editor == query) page.Controls.Remove(query);
+        sourceTabs.TabPages.Remove(page);
+        page.Dispose();
+    }
+    private void OpenStackFrame(int index)
+    {
+        if (index >= 0 && index < stack.Items.Count && stack.Items[index] is FrameItem item)
+            ShowSource(item.Frame.Source);
+    }
     private SqlEditor ShowSource(SourceDocument source)
     {
-        if (!editors.TryGetValue(source.Key, out var editor)) { editor = new SqlEditor(source, breakpoints); AddEditor(editor); }
+        if (!editors.TryGetValue(source.Key, out var editor))
+        {
+            editor = source.Key == "batch" ? query : new SqlEditor(source, breakpoints);
+            if (editor == query && editor.Source.Hash != source.Hash) editor.LoadSource(source);
+            AddEditor(editor);
+        }
         else if (editor.Source.Hash != source.Hash)
         {
             if (breakpoints.All.Any(b => b.SourceKey == source.Key)) Log($"Source changed: {source.Name}. Old breakpoints are unbound; reset them against the new source.");
@@ -105,6 +130,8 @@ internal sealed class MainForm : Form
         }
         else if (editor != query) editor.LoadSource(source);
         sourceTabs.SelectedTab = sourceTabs.TabPages.Cast<TabPage>().First(p => p.Controls.Contains(editor));
+        if (session?.IsPaused == true && currentPause is { } pause && pause.Source.Key == source.Key)
+            editor.Highlight(pause.Span);
         return editor;
     }
     private void UpdateBreakpoints()
@@ -130,6 +157,7 @@ internal sealed class MainForm : Form
     {
         if (session?.IsRunning == true || loadingModules) return;
         lastError = null;
+        currentPause = null;
         resultTabs.TabPages.Clear(); output.Clear(); locals.DataSource = null; stack.Items.Clear();
         query.RefreshQuery(); query.TextBox.ReadOnly = true;
         session?.Dispose();
@@ -141,7 +169,7 @@ internal sealed class MainForm : Form
             if (demo && source.Database == "tempdb" && source.Key != "batch" && !modules.Items.Cast<SourceDocument>().Any(s => s.Key == source.Key)) modules.Items.Add(source);
         });
         session.ResultSet += table => Dispatch(() => { var grid = Grid(); grid.DataSource = table; resultTabs.TabPages.Add(Page(table.TableName, grid)); });
-        session.Running += () => Dispatch(() => { status.Text = "Running…"; UpdateState(); });
+        session.Running += () => Dispatch(() => { currentPause = null; status.Text = "Running…"; UpdateState(); });
         session.Paused += snapshot => Dispatch(() =>
         {
             if (pendingStep != 0) { stepTimes.Add(Stopwatch.GetElapsedTime(pendingStep).TotalMilliseconds); pendingStep = 0; }
@@ -151,16 +179,29 @@ internal sealed class MainForm : Form
             DebugTrace.Write("UI clear highlights end");
             active.Highlight(snapshot.Span);
             DebugTrace.Write("UI show/highlight source end");
-            locals.DataSource = snapshot.Variables.Select(v => new { v.Name, v.Type, v.Value }).ToList();
+            locals.DataSource = snapshot.Variables.OrderBy(v => v.Name, StringComparer.OrdinalIgnoreCase)
+                .Select(v => new { v.Name, v.Type, v.Value }).ToList();
             stack.Items.Clear(); foreach (var frame in snapshot.Stack) stack.Items.Add(new FrameItem(frame));
             status.Text = $"{snapshot.Reason} • {snapshot.Source.Database}.{snapshot.Source.DisplayName} • Line {snapshot.Line} • SPID {snapshot.Spid}";
             UpdateState();
             DebugTrace.Write("UI pause display complete");
+            currentPause = snapshot;
             if (smokeDirectory != null)
             {
+                if (snapshot.Source.Name.EndsWith("_Outer", StringComparison.Ordinal) && snapshot.Line == 4)
+                {
+                    int caret = active.TextBox.SelectionStart;
+                    int nextLine = active.TextBox.GetFirstCharIndexFromLine(4);
+                    active.TextBox.Select(nextLine, 1);
+                    if (active.TextBox.SelectionBackColor != Color.White)
+                        throw new InvalidOperationException("DECLARE marker spills into the following line.");
+                    active.TextBox.Select(caret, 0);
+                    SavePreview(Path.Combine(smokeDirectory, "debugger-statement-marker.png"));
+                }
                 if (!smokeCaptured && snapshot.Variables.Any(v => v.Name == "@answer" && v.Value == "14"))
                 {
                     active.ToggleAtCaret(); UpdateBreakpoints();
+                    CheckTabNavigation(snapshot);
                     DebugTrace.Write("UI preview begin");
                     SavePreview(Path.Combine(smokeDirectory, "debugger-paused.png")); smokeCaptured = true;
                     DebugTrace.Write("UI preview end");
@@ -179,6 +220,7 @@ internal sealed class MainForm : Form
         catch (Exception ex) { lastError = ex; Log(ex.ToString()); status.Text = "Debugging failed — see Debug Output."; bottomTabs.SelectedIndex = 0; }
         finally
         {
+            currentPause = null;
             query.TextBox.ReadOnly = false;
             foreach (var editor in editors.Values) editor.ClearHighlight();
             locals.DataSource = null; stack.Items.Clear(); UpdateState();
@@ -203,8 +245,9 @@ internal sealed class MainForm : Form
     private void OpenSql()
     {
         using var dialog = new OpenFileDialog { Filter = "SQL scripts (*.sql)|*.sql|All files (*.*)|*.*" };
-        if (dialog.ShowDialog(this) == DialogResult.OK) { query.LoadSource(new("batch", "Query", database.Text, File.ReadAllText(dialog.FileName), Array.Empty<StatementSpan>())); sourceTabs.SelectedIndex = 0; }
+        if (dialog.ShowDialog(this) == DialogResult.OK) { query.LoadSource(new("batch", "Query", database.Text, File.ReadAllText(dialog.FileName), Array.Empty<StatementSpan>())); ShowSource(query.Source); }
     }
+    private void ShowQuery() => ShowSource(query.Source);
     private void SaveSql()
     {
         if (ActiveEditor is not { } editor) return;
@@ -216,6 +259,11 @@ internal sealed class MainForm : Form
     {
         smokeDirectory = directory;
         Directory.CreateDirectory(directory);
+        var queryText = query.TextBox.Text;
+        CloseSourceTab(sourceTabs.SelectedTab!);
+        if (editors.ContainsKey("batch") || query.IsDisposed) throw new InvalidOperationException("Closing Query did not retain its editor.");
+        ShowSource(query.Source);
+        if (ActiveEditor != query || query.TextBox.Text != queryText) throw new InvalidOperationException("Reopening Query lost its text.");
         await Start(true);
         if (lastError != null) throw lastError;
         if (!smokeCaptured || resultTabs.TabPages.Count != 2) throw new InvalidOperationException("UI smoke test failed to display the function pause or both result sets.");
@@ -223,8 +271,60 @@ internal sealed class MainForm : Form
             throw new InvalidOperationException("UI step latency regression (limit 2000 ms): " + string.Join(", ", stepTimes.Select(ms => ms.ToString("F1"))));
         SavePreview(Path.Combine(directory, "debugger-results.png"));
         File.WriteAllText(Path.Combine(directory, "ui-tests.log"), "PASS: Windows Forms created, nested function source highlighted, @answer=14 displayed, gutter breakpoint toggled, two result-set grids displayed.\n" +
+            "PASS: source tab close buttons, single-click call-stack reopening, repeated click on selected frame, preserved breakpoint and statement marker, Query text retained.\n" +
             "Step latencies (ms): " + string.Join(", ", stepTimes.Select(ms => ms.ToString("F1"))) + "\n" + output.Text);
         return 0;
+    }
+    private void CheckTabNavigation(PauseSnapshot snapshot)
+    {
+        // Exercise the real mouse handlers, including a second click on an
+        // already selected frame after closing its tab again.
+        var inspection = (TabControl)stack.Parent!.Parent!;
+        var previous = inspection.SelectedTab;
+        inspection.SelectedTab = (TabPage)stack.Parent;
+        int caller = snapshot.Stack.ToList().FindIndex(f => f.Source.Key != snapshot.Source.Key);
+        if (caller < 0) throw new InvalidOperationException("Missing caller frame for tab navigation test.");
+        CheckFrame(caller);
+        int current = snapshot.Stack.ToList().FindIndex(f => f.Source.Key == snapshot.Source.Key);
+        CheckFrame(current);
+        CheckFrame(current);
+        var editor = ActiveEditor!;
+        int position = editor.TextBox.SelectionStart;
+        editor.TextBox.Select(position, 1);
+        if (editor.TextBox.SelectionBackColor != Color.FromArgb(255, 239, 156))
+            throw new InvalidOperationException("Reopened paused frame lost its statement marker.");
+        editor.TextBox.Select(position, 0);
+        inspection.SelectedTab = previous;
+
+        void CheckFrame(int index)
+        {
+            var source = ((FrameItem)stack.Items[index]).Frame.Source;
+            var oldEditor = editors[source.Key];
+            int count = sourceTabs.TabCount;
+            var points = breakpoints.All.ToArray();
+            int tabIndex = sourceTabs.TabPages.Cast<TabPage>().ToList().FindIndex(p => p.Controls.Contains(oldEditor));
+            var close = sourceTabs.CloseBounds(tabIndex);
+            SendMouseClick(sourceTabs, new Point(close.Left + close.Width / 2, close.Top + close.Height / 2));
+            if (editors.ContainsKey(source.Key) || sourceTabs.TabCount != count - 1 || !oldEditor.IsDisposed)
+                throw new InvalidOperationException("Tab close button did not dispose its module editor.");
+            var row = stack.GetItemRectangle(index);
+            SendMouseClick(stack, new Point(row.Left + 10, row.Top + row.Height / 2));
+            if (ActiveEditor?.Source.Key != source.Key || sourceTabs.TabCount != count || !points.SequenceEqual(breakpoints.All))
+                throw new InvalidOperationException($"Call-stack click failed to reopen {source.Key} with its breakpoints: active={ActiveEditor?.Source.Key}, tabs={sourceTabs.TabCount}/{count}.");
+        }
+    }
+    private static void SendMouseClick(Control control, Point point)
+    {
+        var position = (IntPtr)((point.Y << 16) | (point.X & 0xffff));
+        SendMessage(control.Handle, 0x201, (IntPtr)1, position);
+        SendMessage(control.Handle, 0x202, IntPtr.Zero, position);
+    }
+    [System.Runtime.InteropServices.DllImport("user32.dll", EntryPoint = "SendMessageW")]
+    private static extern IntPtr SendMessage(IntPtr window, int message, IntPtr wParam, IntPtr lParam);
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing) query?.Dispose();
+        base.Dispose(disposing);
     }
     private void SavePreview(string path)
     {
