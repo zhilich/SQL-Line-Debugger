@@ -20,6 +20,9 @@ internal sealed class TempDbTracker : IDisposable
     private readonly List<Statement> statements = new();
     private readonly List<Constraint> constraints = new();
     private readonly Dictionary<(long Scope, int Object), string> names = new();
+    private readonly List<ModuleEntry> moduleEntries = new();
+    private readonly HashSet<long> enteredScopes = new();
+    private readonly Dictionary<int, DateTime> orphanEntryObjects = new();
     private Task? collector;
     private long generation, lastSequence, processedEvents, droppedEvents;
     private bool started, lossReported;
@@ -43,8 +46,11 @@ internal sealed class TempDbTracker : IDisposable
         internal readonly long Scope = scope;
         internal readonly HashSet<string> Variables = variables;
         internal readonly HashSet<int> Objects = new();
+        internal readonly HashSet<int> EntryObjects = new();
         internal readonly string Sql = sql;
     }
+    private sealed record ModuleEntry(int ObjectId, DateTime Started, long CallerScope, Metadata[] Tables)
+    { internal long Scope; }
     private sealed record Constraint(long Scope, HashSet<string> Variables, HashSet<int> Objects);
 
     internal TempDbTracker(string connectionString, Action<string> log, string? name = null)
@@ -71,6 +77,8 @@ internal sealed class TempDbTracker : IDisposable
         command.CommandText = $"""
             CREATE EVENT SESSION {SqlCatalog.Quote(sessionName)} ON SERVER
             ADD EVENT sqlserver.lock_acquired({actions} WHERE([database_id]=(2) AND {predicate})),
+            ADD EVENT sqlserver.module_start(SET collect_statement=(0) {actions} WHERE({predicate})),
+            ADD EVENT sqlserver.module_end(SET collect_statement=(0) {actions} WHERE({predicate})),
             ADD EVENT sqlserver.sp_statement_starting(SET collect_statement=(1) {actions} WHERE({predicate})),
             ADD EVENT sqlserver.sp_statement_completed(SET collect_statement=(1) {actions} WHERE({predicate})),
             ADD EVENT sqlserver.sql_statement_starting(SET collect_statement=(1) {actions} WHERE({predicate})),
@@ -105,6 +113,7 @@ internal sealed class TempDbTracker : IDisposable
             int objectId = int.TryParse(source.Key[(source.Key.LastIndexOf(':') + 1)..], out int id) ? id : 0;
             var scope = new Scope(++generation, level, objectId, source, SqlTableReferences.Variables(source.Text), DateTime.UtcNow);
             scopes[level] = scope; scopeHistory[scope.Id] = scope;
+            BindModuleEntries();
             Publish();
         }
     }
@@ -134,7 +143,12 @@ internal sealed class TempDbTracker : IDisposable
     private void Publish()
     {
             var active = scopes.Values.Select(s => s.Id).ToHashSet();
-            Volatile.Write(ref published, objects.Values.Where(o => metadata.ContainsKey(o.Table.Id) && (o.Owner == 0 || active.Contains(o.Owner)))
+            // Owner 0 denotes unknown scope for local objects, not session-wide
+            // lifetime. Cached locals can retain metadata and acquire cleanup
+            // locks after return, especially when XE loses statement context.
+            // Only global tables may be shown without an active owning frame.
+            Volatile.Write(ref published, objects.Values.Where(o => metadata.ContainsKey(o.Table.Id) &&
+                    (o.Table.InternalName.StartsWith("##", StringComparison.Ordinal) || (o.Owner != 0 && active.Contains(o.Owner))))
                 .OrderByDescending(o => o.Sequence).Select(o =>
                 {
                     string name = o.Table.Variable
@@ -179,7 +193,7 @@ internal sealed class TempDbTracker : IDisposable
             // already established for a live object in a particular invocation.
             // RemoveExpiredObjects validates ID/name/create_date below, and
             // PruneHistory retires mappings when their owning frame has exited.
-            constraints.Clear(); statements.Clear();
+            constraints.Clear(); statements.Clear(); moduleEntries.Clear(); orphanEntryObjects.Clear();
             if (!lossReported) { log("TempDB XE buffer lost events; confirmed names are preserved for live objects. Unresolved variables need new statement evidence."); lossReported = true; }
         }
         processedEvents = total;
@@ -225,12 +239,27 @@ internal sealed class TempDbTracker : IDisposable
     private void RemoveExpiredObjects()
     {
         foreach (var id in objects.Keys.ToArray())
+        {
+            var observed = objects[id];
+            // Cached local temp storage changes between its internal hex name
+            // and the user's padded name without changing physical identity.
+            // Keep its invocation ownership across that rename, including a
+            // retired owner so returning cached tables remain hidden.
+            if (metadata.TryGetValue(id, out var renamed) && renamed.Created == observed.Table.Created &&
+                renamed.InternalName != observed.Table.InternalName && renamed.Variable != observed.Table.Variable)
+            {
+                observed.Table = renamed; observed.FriendlyName = null;
+                foreach (var key in names.Keys.Where(n => n.Object == id).ToArray()) names.Remove(key);
+                constraints.RemoveAll(c => c.Objects.Contains(id));
+                continue;
+            }
             if (!metadata.TryGetValue(id, out var live) || live.InternalName != objects[id].Table.InternalName || live.Created != objects[id].Table.Created)
             {
                 objects.Remove(id);
                 foreach (var key in names.Keys.Where(n => n.Object == id).ToArray()) names.Remove(key);
                 constraints.RemoveAll(c => c.Objects.Contains(id));
             }
+        }
     }
 
     private void PruneHistory(DateTime watermark)
@@ -242,7 +271,25 @@ internal sealed class TempDbTracker : IDisposable
         constraints.RemoveAll(c => retired.Contains(c.Scope));
         statements.RemoveAll(s => retired.Contains(s.Scope));
         var owners = objects.Values.Select(o => o.Owner).ToHashSet();
-        foreach (long id in retired.Where(id => !owners.Contains(id))) scopeHistory.Remove(id);
+        foreach (long id in retired.Where(id => !owners.Contains(id))) { scopeHistory.Remove(id); enteredScopes.Remove(id); }
+    }
+
+    private void BindModuleEntries()
+    {
+        foreach (var entry in moduleEntries.Where(e => e.Scope == 0))
+        {
+            // The native push follows allocation/module_start and may be delayed
+            // by source loading. Match each invocation once, including recursion.
+            int? level = scopeHistory.TryGetValue(entry.CallerScope, out var caller) ? caller.Level + 1 : null;
+            var scope = scopeHistory.Values.Where(s => s.ObjectId == entry.ObjectId && !enteredScopes.Contains(s.Id) &&
+                s.Entered >= entry.Started.AddMilliseconds(-20) && s.Exited >= entry.Started && (!level.HasValue || s.Level == level))
+                .OrderBy(s => Math.Abs((s.Entered - entry.Started).Ticks)).FirstOrDefault();
+            if (scope == null) continue;
+            entry.Scope = scope.Id; enteredScopes.Add(scope.Id);
+            foreach (var table in entry.Tables)
+                if (objects.TryGetValue(table.Id, out var observed) && observed.Table == table)
+                    observed.Owner = scope.Id;
+        }
     }
 
     private void Process(XElement e, long sequence)
@@ -251,6 +298,32 @@ internal sealed class TempDbTracker : IDisposable
         int objectId = (int)Number(Data(e, "object_id"));
         int nest = (int)Number(Data(e, "nest_level"));
         int offset = (int)Number(Data(e, "offset"));
+        if (kind == "module_start")
+        {
+            var call = statements.LastOrDefault();
+            var timestamp = DateTime.Parse((string)e.Attribute("timestamp")!, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal);
+            // A ring-buffer gap can remove the enclosing EXEC even though the
+            // initialization locks and module_start survived. Use only the
+            // immediately preceding unowned locks in that case.
+            var ids = (call?.EntryObjects ?? new HashSet<int>()).Concat(orphanEntryObjects.Where(p =>
+                p.Value >= timestamp.AddMilliseconds(-20) && p.Value <= timestamp).Select(p => p.Key)).Distinct();
+            var tables = ids.Where(objects.ContainsKey).Select(id => objects[id].Table).ToArray();
+            call?.EntryObjects.Clear();
+            orphanEntryObjects.Clear();
+            moduleEntries.Add(new ModuleEntry(objectId, timestamp, call?.Scope ?? 0, tables));
+            BindModuleEntries();
+            return;
+        }
+        if (kind == "module_end")
+        {
+            int index = moduleEntries.FindLastIndex(m => m.ObjectId == objectId);
+            if (index >= 0) moduleEntries.RemoveRange(index, moduleEntries.Count - index);
+            // Objects locked during return/cache cleanup do not belong to the
+            // next module's initialization group.
+            statements.LastOrDefault()?.EntryObjects.Clear();
+            orphanEntryObjects.Clear();
+            return;
+        }
         if (kind.EndsWith("statement_starting", StringComparison.Ordinal))
         {
             DateTime timestamp = DateTime.Parse((string?)e.Attribute("timestamp") ?? "", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal);
@@ -277,12 +350,21 @@ internal sealed class TempDbTracker : IDisposable
         if (objectId == 0 && ulong.TryParse(Data(e, "associated_object_id"), out ulong allocation)) allocations.TryGetValue(allocation, out objectId);
         if (!metadata.TryGetValue(objectId, out var table)) return;
         var current = statements.LastOrDefault();
-        long owner = current?.Scope ?? 0;
+        // Locks at procedure entry/exit can arrive while only the caller's EXEC
+        // remains in XE context. They do not prove ownership by that caller.
+        long owner = current != null && !IsExecute(current.Sql) ? current.Scope : 0;
         bool global = table.InternalName.StartsWith("##", StringComparison.Ordinal);
-        if (!objects.TryGetValue(objectId, out var observed)) objects[objectId] = observed = new Observed(table, sequence, global ? 0 : owner);
+        if (!objects.TryGetValue(objectId, out var observed))
+        {
+            objects[objectId] = observed = new Observed(table, sequence, 0);
+        }
         observed.Sequence = sequence;
+        if (current == null && !global && observed.Owner == 0)
+            orphanEntryObjects[objectId] = DateTime.Parse((string)e.Attribute("timestamp")!, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal);
         if (current != null)
         {
+            if (!global && (table.Variable || IsExecute(current.Sql)) && (observed.Owner == 0 || !scopes.Values.Any(s => s.Id == observed.Owner)))
+                current.EntryObjects.Add(objectId);
             if (table.Variable) current.Objects.Add(objectId);
             else
             {
@@ -295,7 +377,8 @@ internal sealed class TempDbTracker : IDisposable
             // Ownership is set at creation/first observation, not by an inherited
             // temp table's later use inside a child procedure.
             bool retiredOwner = observed.Owner != 0 && !scopes.Values.Any(s => s.Id == observed.Owner);
-            if (!global && ((observed.Owner == 0 && table.Variable) || current.Sql.TrimStart().StartsWith("CREATE", StringComparison.OrdinalIgnoreCase) ||
+            bool referenced = table.Variable ? current.Variables.Count > 0 : observed.FriendlyName != null;
+            if (!global && owner != 0 && referenced && (observed.Owner == 0 || current.Sql.TrimStart().StartsWith("CREATE", StringComparison.OrdinalIgnoreCase) ||
                 (retiredOwner && scopeHistory.TryGetValue(observed.Owner, out var previous) && scopeHistory.TryGetValue(owner, out var next) && previous.Source.Key == next.Source.Key && previous.Level == next.Level)))
                 observed.Owner = owner;
         }
@@ -303,10 +386,16 @@ internal sealed class TempDbTracker : IDisposable
 
     private void Complete(Statement statement)
     {
-        if (statement.Scope == 0 || statement.Variables.Count == 0 || statement.Objects.Count != statement.Variables.Count) return;
+        if (statement.Scope == 0 || IsExecute(statement.Sql) || statement.Variables.Count == 0 || statement.Objects.Count != statement.Variables.Count) return;
         if (!constraints.Any(c => c.Scope == statement.Scope && c.Variables.SetEquals(statement.Variables) && c.Objects.SetEquals(statement.Objects)))
             constraints.Add(new Constraint(statement.Scope, statement.Variables, statement.Objects));
         ResolveConstraints();
+    }
+
+    private static bool IsExecute(string sql)
+    {
+        string? first = SqlTableReferences.Tokens(sql).FirstOrDefault();
+        return string.Equals(first, "EXEC", StringComparison.OrdinalIgnoreCase) || string.Equals(first, "EXECUTE", StringComparison.OrdinalIgnoreCase);
     }
 
     private void ResolveConstraints()

@@ -7,10 +7,10 @@ internal static class Program
     {
         NativeMethods.InitializeSecurity();
         if (args.Length == 2 && args[0] == "--debug-worker") return DebugWorker.Run(args[1]);
-        if (args.Contains("--tempdb-test") || args.Contains("--tempdb-stepover-test") || args.Contains("--tempdb-types-test") || args.Contains("--tempdb-global-test"))
+        if (args.Contains("--tempdb-test") || args.Contains("--tempdb-stepover-test") || args.Contains("--tempdb-types-test") || args.Contains("--tempdb-global-test") || args.Contains("--tempdb-entry-test"))
         {
             string path = args.SkipWhile(a => a != "--log").Skip(1).FirstOrDefault() ?? "artifacts/tempdb-tests.log";
-            return TempDbTests.Run(path, args.Contains("--tempdb-stepover-test"), args.Contains("--tempdb-types-test"), args.Contains("--tempdb-global-test"));
+            return TempDbTests.Run(path, args.Contains("--tempdb-stepover-test"), args.Contains("--tempdb-types-test"), args.Contains("--tempdb-global-test"), args.Contains("--tempdb-entry-test"));
         }
         if (args.Contains("--self-test"))
         {

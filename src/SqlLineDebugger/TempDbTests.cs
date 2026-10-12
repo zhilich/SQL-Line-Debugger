@@ -6,11 +6,13 @@ namespace SqlLineDebugger;
 internal static partial class TempDbTests
 {
     private static readonly string Connection = SqlCatalog.ConnectionString(@"(localdb)\mssqllocaldb", "Test");
-    internal static int Run(string path, bool stepOverOnly = false, bool typesOnly = false, bool globalOnly = false)
+    internal static int Run(string path, bool stepOverOnly = false, bool typesOnly = false, bool globalOnly = false, bool entryOnly = false)
     {
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
         using var log = new StreamWriter(path) { AutoFlush = true };
         try
         {
+            if (entryOnly) { TestEarlyProcedureVariables(log).GetAwaiter().GetResult(); return 0; }
             if (globalOnly)
             {
                 TestGlobalCopies(log).GetAwaiter().GetResult();
@@ -25,6 +27,7 @@ internal static partial class TempDbTests
             }
             if (stepOverOnly)
             {
+                TestEarlyProcedureVariables(log).GetAwaiter().GetResult();
                 TestStepOverNames(log).GetAwaiter().GetResult();
                 log.WriteLine("ALL TEMPDB STEP OVER TESTS PASSED");
                 return 0;
@@ -38,6 +41,7 @@ internal static partial class TempDbTests
             TestGlobalCopies(log).GetAwaiter().GetResult();
             TestNestedScopes(log).GetAwaiter().GetResult();
             TestStepOverNames(log).GetAwaiter().GetResult();
+            TestEarlyProcedureVariables(log).GetAwaiter().GetResult();
             TestFunctionAndSample(log).GetAwaiter().GetResult();
             TestCancellation(log).GetAwaiter().GetResult();
             using var cleanup = new SqlConnection(Connection); cleanup.Open();
@@ -54,14 +58,19 @@ internal static partial class TempDbTests
         using var setup = new SqlConnection(Connection); await setup.OpenAsync();
         using var check = setup.CreateCommand(); check.CommandText = "SELECT OBJECT_ID(N'SqlDebugLab.Run')";
         if (await check.ExecuteScalarAsync() is int)
+        {
             await Verify("EXEC SqlDebugLab.Run @RowCount=3;", "EXEC SqlDebugLab.ProcessWork");
+            await Verify("EXEC SqlDebugLab.Run @RowCount=3;", "EXEC SqlDebugLab.TypesLab", true);
+            await Verify("EXEC SqlDebugLab.Run @RowCount=0,@IncludeUnsupported=1;", "EXEC SqlDebugLab.TypesLab", true);
+        }
         else log.WriteLine("SKIP SqlDebugLab.ProcessWork reproduction (sample absent)");
 
-        async Task Verify(string sql, string call)
+        async Task Verify(string sql, string call, bool noChildObjects = false)
         {
             using var session = new DebugSession(Connection, new());
             var expected = new[] { "@Left", "@Right", "@rows" };
             Dictionary<int, string>? before = null;
+            HashSet<int>? callerObjects = null;
             Exception? failure = null;
             bool steppedOver = false, checkedNames = false;
             int loss = 0;
@@ -76,10 +85,14 @@ internal static partial class TempDbTests
                 try
                 {
                     string statement = snapshot.Source.Statement(snapshot.Span);
+                    if (!steppedOver && statement.TrimStart().StartsWith("PRINT", StringComparison.OrdinalIgnoreCase) && statement.Contains("A3 Run", StringComparison.Ordinal))
+                        await WaitTables(session, t => expected.All(n => t.Any(x => x.Name == n)));
                     if (!steppedOver && statement.Contains(call, StringComparison.Ordinal))
                     {
                         var tables = await WaitTables(session, t => expected.All(n => t.Any(x => x.Name == n)));
                         before = tables.Where(t => expected.Contains(t.Name)).ToDictionary(t => t.ObjectId, t => t.Name);
+                        callerObjects = tables.Select(t => t.ObjectId).ToHashSet();
+                        log.WriteLine("BEFORE " + call + ": " + string.Join(", ", tables.Select(t => $"{t.Name}/{t.ObjectId}")));
                         Require(before.Count == 3, "three caller variables resolved before Step Over");
                         steppedOver = true;
                         session.Resume(DebugAction.Over);
@@ -94,6 +107,23 @@ internal static partial class TempDbTests
                             var tables = session.TempTables;
                             Require(before!.All(pair => tables.Any(t => t.ObjectId == pair.Key && t.Name == pair.Value)),
                                 "caller variable names remain resolved after Step Over: " + string.Join(", ", tables.Select(t => t.Name)));
+                        }
+                        if (noChildObjects)
+                        {
+                            var extra = session.TempTables.Where(t => !callerObjects!.Contains(t.ObjectId)).ToArray();
+                            log.WriteLine("AFTER " + call + ": " + string.Join(", ", session.TempTables.Select(t => $"{t.Name}/{t.ObjectId}")));
+                            foreach (var table in extra)
+                            {
+                                using var cmd = setup.CreateCommand();
+                                cmd.CommandText = "SELECT name FROM tempdb.sys.columns WHERE object_id=@id ORDER BY column_id";
+                                cmd.Parameters.AddWithValue("@id", table.ObjectId);
+                                using var reader = await cmd.ExecuteReaderAsync();
+                                var columns = new List<string>(); while (await reader.ReadAsync()) columns.Add(reader.GetString(0));
+                                log.WriteLine($"Unexpected {table.Name}/{table.ObjectId}: " + string.Join(",", columns));
+                            }
+                            Require(extra.Length == 0, "child objects must disappear after Step Over: " + string.Join(", ", extra.Select(t => t.Name)));
+                            Require(session.TempTables.Count == 6 && session.TempTables.Select(t => t.Name).ToHashSet(StringComparer.OrdinalIgnoreCase)
+                                .SetEquals(new[] { "@Left", "@Right", "@rows", "#Work", "#Trace", "#Snapshots" }), "only the six live caller objects remain after TypesLab");
                         }
                         foreach (var pair in before!)
                         {
