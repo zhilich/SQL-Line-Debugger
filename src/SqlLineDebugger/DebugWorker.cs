@@ -20,10 +20,11 @@ internal static class DebugWorker
         using var start = JsonDocument.Parse(line);
         var request = start.RootElement.GetProperty("data").Deserialize<WorkerRequest>()!;
         var points = new BreakpointStore(); points.Replace(request.Breakpoints);
-        using var session = new NativeDebugSession(request.ConnectionString, points);
+        using var session = new NativeDebugSession(request.ConnectionString, points, request.TempDbSessionName);
         session.Output += text => Send("output", text);
         session.SourceLoaded += source => Send("source", source);
         session.Paused += snapshot => Send("paused", snapshot);
+        session.TablesChanged += discovery => Send("tables", discovery);
         session.ResultSet += table => Send("result", new
         {
             name = table.TableName,

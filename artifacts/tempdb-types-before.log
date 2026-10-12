@@ -1,0 +1,58 @@
+Connected to (localdb)\mssqllocaldb / Test, SQL 15.00.4382.
+Debug target SPID 70.
+Worker batch=0 id=0 level=0
+TempDB XE buffer lost events; confirmed names are preserved for live objects. Unresolved variables need new statement evidence.
+FAIL TypesLab #Types: System.Exception: ASSERT: #Types NULL row
+   at SqlLineDebugger.TempDbTests.Require(Boolean condition, String message) in C:\Users\Raman\OneDrive\Documents\ChatGPT\SQL Server Debugger\src\SqlLineDebugger\TempDbTests.cs:line 369
+   at SqlLineDebugger.TempDbTests.<>c__DisplayClass11_0.<<TestTypesLab>b__0>d.MoveNext() in C:\Users\Raman\OneDrive\Documents\ChatGPT\SQL Server Debugger\src\SqlLineDebugger\TempDbTests.Types.cs:line 39
+PASS TypesLab @binary: 1 rows; Id:Int32, FixedBytes:Byte[], ShortText:String
+Y1 TypesLab: supported physical layouts
+PASS TypesLab #ManyRows: 200 rows; Id:Int32, Payload:String
+Y2 TypesLab: 200 rows across multiple pages
+FAIL TypesLab #UnsupportedDate: Microsoft.Data.SqlClient.SqlException (0x80131904): Unsupported column layout/type (including sparse, computed or encrypted columns).
+   at Microsoft.Data.SqlClient.SqlConnection.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction)
+   at Microsoft.Data.SqlClient.Connection.SqlConnectionInternal.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction)
+   at Microsoft.Data.SqlClient.TdsParser.ThrowExceptionAndWarning(TdsParserStateObject stateObj, SqlCommand command, Boolean callerHasConnectionLock, Boolean asyncClose)
+   at Microsoft.Data.SqlClient.TdsParser.TryRun(RunBehavior runBehavior, SqlCommand cmdHandler, SqlDataReader dataStream, BulkCopySimpleResultSet bulkCopyHandler, TdsParserStateObject stateObj, Boolean& dataReady)
+   at Microsoft.Data.SqlClient.SqlDataReader.TryConsumeMetaData()
+   at Microsoft.Data.SqlClient.SqlDataReader.get_MetaData()
+   at Microsoft.Data.SqlClient.SqlCommand.FinishExecuteReader(SqlDataReader ds, RunBehavior runBehavior, String resetOptionsString, Boolean isInternal, Boolean forDescribeParameterEncryption, Boolean shouldCacheForAlwaysEncrypted)
+   at Microsoft.Data.SqlClient.SqlCommand.CompleteAsyncExecuteReader(Boolean isInternal, Boolean forDescribeParameterEncryption)
+   at Microsoft.Data.SqlClient.SqlCommand.InternalEndExecuteReader(IAsyncResult asyncResult, Boolean isInternal, String endMethod)
+   at Microsoft.Data.SqlClient.SqlCommand.EndExecuteReaderInternal(IAsyncResult asyncResult)
+   at Microsoft.Data.SqlClient.SqlCommand.EndExecuteReaderAsync(IAsyncResult asyncResult)
+   at Microsoft.Data.SqlClient.SqlCommand.<>c.<InternalExecuteReaderAsync>b__283_1(IAsyncResult asyncResult)
+   at System.Threading.Tasks.TaskFactory`1.FromAsyncCoreLogic(IAsyncResult iar, Func`2 endFunction, Action`1 endAction, Task`1 promise, Boolean requiresSynchronization)
+--- End of stack trace from previous location ---
+   at SqlLineDebugger.TempDbInspector.ReadAsync(String connectionString, TempDbObject table, CancellationToken cancellation) in C:\Users\Raman\OneDrive\Documents\ChatGPT\SQL Server Debugger\src\SqlLineDebugger\TempDbInspector.cs:line 46
+   at SqlLineDebugger.TempDbTests.<>c__DisplayClass11_0.<<TestTypesLab>b__0>d.MoveNext() in C:\Users\Raman\OneDrive\Documents\ChatGPT\SQL Server Debugger\src\SqlLineDebugger\TempDbTests.Types.cs:line 30
+ClientConnectionId:1fc18b44-fd61-43a7-ad2b-967d17a61649
+Error Number:51000,State:1,Class:16
+Y3 TypesLab: deliberately unsupported datetime2
+FAIL TypesLab #NonUniqueClustered: Microsoft.Data.SqlClient.SqlException (0x80131904): Hidden/dropped columns or physical layout changes are unsupported.
+   at Microsoft.Data.SqlClient.SqlConnection.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction)
+   at Microsoft.Data.SqlClient.Connection.SqlConnectionInternal.OnError(SqlException exception, Boolean breakConnection, Action`1 wrapCloseInAction)
+   at Microsoft.Data.SqlClient.TdsParser.ThrowExceptionAndWarning(TdsParserStateObject stateObj, SqlCommand command, Boolean callerHasConnectionLock, Boolean asyncClose)
+   at Microsoft.Data.SqlClient.TdsParser.TryRun(RunBehavior runBehavior, SqlCommand cmdHandler, SqlDataReader dataStream, BulkCopySimpleResultSet bulkCopyHandler, TdsParserStateObject stateObj, Boolean& dataReady)
+   at Microsoft.Data.SqlClient.SqlDataReader.TryConsumeMetaData()
+   at Microsoft.Data.SqlClient.SqlDataReader.get_MetaData()
+   at Microsoft.Data.SqlClient.SqlCommand.FinishExecuteReader(SqlDataReader ds, RunBehavior runBehavior, String resetOptionsString, Boolean isInternal, Boolean forDescribeParameterEncryption, Boolean shouldCacheForAlwaysEncrypted)
+   at Microsoft.Data.SqlClient.SqlCommand.CompleteAsyncExecuteReader(Boolean isInternal, Boolean forDescribeParameterEncryption)
+   at Microsoft.Data.SqlClient.SqlCommand.InternalEndExecuteReader(IAsyncResult asyncResult, Boolean isInternal, String endMethod)
+   at Microsoft.Data.SqlClient.SqlCommand.EndExecuteReaderInternal(IAsyncResult asyncResult)
+   at Microsoft.Data.SqlClient.SqlCommand.EndExecuteReaderAsync(IAsyncResult asyncResult)
+   at Microsoft.Data.SqlClient.SqlCommand.<>c.<InternalExecuteReaderAsync>b__283_1(IAsyncResult asyncResult)
+   at System.Threading.Tasks.TaskFactory`1.FromAsyncCoreLogic(IAsyncResult iar, Func`2 endFunction, Action`1 endAction, Task`1 promise, Boolean requiresSynchronization)
+--- End of stack trace from previous location ---
+   at SqlLineDebugger.TempDbInspector.ReadAsync(String connectionString, TempDbObject table, CancellationToken cancellation) in C:\Users\Raman\OneDrive\Documents\ChatGPT\SQL Server Debugger\src\SqlLineDebugger\TempDbInspector.cs:line 46
+   at SqlLineDebugger.TempDbTests.<>c__DisplayClass11_0.<<TestTypesLab>b__0>d.MoveNext() in C:\Users\Raman\OneDrive\Documents\ChatGPT\SQL Server Debugger\src\SqlLineDebugger\TempDbTests.Types.cs:line 30
+ClientConnectionId:e6d9d42b-2b23-4577-a1c2-4249b897a6ad
+Error Number:51000,State:1,Class:16
+Y4 TypesLab: deliberately unsupported hidden uniquifier
+Execution completed; 0 result set(s).
+System.Exception: ASSERT: #Types: ASSERT: #Types NULL row
+#UnsupportedDate: Unsupported column layout/type (including sparse, computed or encrypted columns).
+#NonUniqueClustered: Hidden/dropped columns or physical layout changes are unsupported.
+   at SqlLineDebugger.TempDbTests.Require(Boolean condition, String message) in C:\Users\Raman\OneDrive\Documents\ChatGPT\SQL Server Debugger\src\SqlLineDebugger\TempDbTests.cs:line 369
+   at SqlLineDebugger.TempDbTests.TestTypesLab(TextWriter log) in C:\Users\Raman\OneDrive\Documents\ChatGPT\SQL Server Debugger\src\SqlLineDebugger\TempDbTests.Types.cs:line 55
+   at SqlLineDebugger.TempDbTests.Run(String path, Boolean stepOverOnly, Boolean typesOnly) in C:\Users\Raman\OneDrive\Documents\ChatGPT\SQL Server Debugger\src\SqlLineDebugger\TempDbTests.cs:line 16

@@ -1,5 +1,11 @@
 # Nested procedure debugger fixture
 
+For the expanded table-variable and temp-table fixture, see
+[TempDB debugger lab](TempDbDebuggerLab.md) and open
+[Run-TempDbDebuggerLab.sql](Run-TempDbDebuggerLab.sql). It uses a separate
+`SqlDebugLab` schema and includes recursion, functions, dynamic SQL, nested
+scopes, snapshots, transactions, and deliberate error scenarios.
+
 Installed in `Test` on `(localdb)\mssqllocaldb`, in the `SqlDebugTest` schema.
 Six procedure definitions contain 16,438 bytes of ASCII/UTF-8 SQL (16.05 KiB).
 SQL Server stores those definitions as Unicode internally. The installation

@@ -1,0 +1,10 @@
+PASS: actual Global button right of Inspect; variable/temp name defaults; cancel and validation; confirmed copy and replacement queryable externally; target stays paused; copies survive debug session end.
+[22:38:54] Connected to (localdb)\mssqllocaldb / Test, SQL 15.00.4382.
+[22:38:54] Debug target SPID 70.
+[22:38:54] Worker batch=0 id=0 level=0
+[22:38:54] Copied 1 row(s) from @Rows to ##SqlLineGlobalUi_430da2d2ec994f6189fe308f34aeade5.
+[22:38:55] Copied 1 row(s) from #GlobalUiTemp to ##SqlLineGlobalUi_430da2d2ec994f6189fe308f34aeade5_Temp.
+[22:38:55] global-ready
+[22:38:55] Copied 2 row(s) from @Rows to ##SqlLineGlobalUi_430da2d2ec994f6189fe308f34aeade5.
+[22:38:55] global-changed
+[22:38:55] Execution completed; 0 result set(s).

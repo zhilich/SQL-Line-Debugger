@@ -3,7 +3,7 @@ using System.Diagnostics;
 
 namespace SqlLineDebugger;
 
-internal sealed class MainForm : Form
+internal sealed partial class MainForm : Form
 {
     private readonly TextBox server = new() { Text = @"(localdb)\mssqllocaldb", Width = 220 };
     private readonly TextBox database = new() { Text = "tempdb", Width = 140 };
@@ -12,12 +12,14 @@ internal sealed class MainForm : Form
     private readonly TabControl resultTabs = new() { Dock = DockStyle.Fill };
     private readonly RichTextBox output = new() { Dock = DockStyle.Fill, ReadOnly = true, Font = new Font("Consolas", 10), BackColor = Color.FromArgb(247, 249, 252), BorderStyle = BorderStyle.None };
     private readonly DataGridView locals = Grid();
+    private readonly DataGridView tempTables = Grid();
     private readonly ListBox stack = new() { Dock = DockStyle.Fill, BorderStyle = BorderStyle.None, Font = new Font("Consolas", 10), DisplayMember = "Name" };
     private readonly ListBox modules = new() { Dock = DockStyle.Fill, BorderStyle = BorderStyle.None, DisplayMember = "DisplayName" };
     private readonly ListBox breakpointList = new() { Dock = DockStyle.Fill, BorderStyle = BorderStyle.None };
     private readonly ToolStripStatusLabel status = new("Ready — load demo or enter a single SQL batch.") { Spring = true, TextAlign = ContentAlignment.MiddleLeft };
     private readonly ToolStrip toolstrip = new() { GripStyle = ToolStripGripStyle.Hidden, Padding = new Padding(6), ImageScalingSize = new Size(20, 20) };
     private readonly BreakpointStore breakpoints = new();
+    private readonly GlobalTempTableCopies globalCopies = new();
     private readonly Dictionary<string, SqlEditor> editors = new();
     private readonly SqlEditor query;
     private DebugSession? session;
@@ -29,10 +31,26 @@ internal sealed class MainForm : Form
     private Exception? lastError;
     private readonly List<double> stepTimes = new();
     private long pendingStep;
+    private Func<PauseSnapshot, Task>? tempDbPauseTest;
+    private Action<TableSnapshotForm>? snapshotOpenedTest;
+    private Action<GlobalTableForm>? globalCopyOpenedTest;
     private ToolStripButton startButton = null!, demoButton = null!, intoButton = null!, overButton = null!, outButton = null!, pauseButton = null!, stopButton = null!, loadButton = null!, openButton = null!;
     public MainForm()
     {
         locals.ShowCellToolTips = false;
+        tempTables.AutoGenerateColumns = false;
+        tempTables.ShowCellToolTips = false;
+        tempTables.Columns.Add(new DataGridViewTextBoxColumn { Name = "Name", HeaderText = "Name", DataPropertyName = "Name", AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill, SortMode = DataGridViewColumnSortMode.NotSortable });
+        tempTables.Columns.Add(new DataGridViewButtonColumn { Name = "Inspect", HeaderText = "", Text = "Inspect", UseColumnTextForButtonValue = true, Width = 80, AutoSizeMode = DataGridViewAutoSizeColumnMode.None });
+        tempTables.Columns.Add(new DataGridViewButtonColumn { Name = "Global", HeaderText = "", Text = "Global", UseColumnTextForButtonValue = true, Width = 80, AutoSizeMode = DataGridViewAutoSizeColumnMode.None });
+        tempTables.CellContentClick += (_, e) =>
+        {
+            if (e.RowIndex >= 0 && tempTables.Rows[e.RowIndex].DataBoundItem is TempDbObject table && session?.IsPaused == true)
+            {
+                if (e.ColumnIndex == 1) InspectTable(table);
+                else if (e.ColumnIndex == 2) CopyTableToGlobal(table);
+            }
+        };
         Text = "SQL Line Debugger"; MinimumSize = new Size(1050, 700); Size = new Size(1440, 920); StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI", 10); BackColor = Color.White;
         var connections = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 46, Padding = new Padding(10, 7, 5, 4), WrapContents = false };
@@ -58,7 +76,7 @@ internal sealed class MainForm : Form
         var horizontal = new SplitContainer { Dock = DockStyle.Fill, Width = 1260, SplitterDistance = 850, Panel1MinSize = 500, Panel2MinSize = 260 };
         horizontal.Panel1.Controls.Add(sourceTabs);
         var inspection = new TabControl { Dock = DockStyle.Fill };
-        inspection.TabPages.Add(Page("Locals", locals)); inspection.TabPages.Add(Page("Call Stack", stack)); inspection.TabPages.Add(Page("Modules", modules)); inspection.TabPages.Add(Page("Breakpoints", breakpointList));
+        inspection.TabPages.Add(Page("Locals", locals)); inspection.TabPages.Add(Page("Call Stack", stack)); inspection.TabPages.Add(Page("TempDB", tempTables)); inspection.TabPages.Add(Page("Modules", modules)); inspection.TabPages.Add(Page("Breakpoints", breakpointList));
         horizontal.Panel2.Controls.Add(inspection); vertical.Panel1.Controls.Add(horizontal);
         Shown += (_, _) => { vertical.SplitterDistance = (int)(vertical.Height * 0.65); horizontal.SplitterDistance = (int)(horizontal.Width * 0.70); };
         bottomTabs.TabPages.Add(Page("Debug Output", output)); bottomTabs.TabPages.Add(Page("Result Sets", resultTabs)); vertical.Panel2.Controls.Add(bottomTabs);
@@ -165,11 +183,16 @@ internal sealed class MainForm : Form
         if (session?.IsRunning == true || loadingModules) return;
         lastError = null;
         currentPause = null;
-        resultTabs.TabPages.Clear(); output.Clear(); locals.DataSource = null; stack.Items.Clear();
+        resultTabs.TabPages.Clear(); output.Clear(); locals.DataSource = null; stack.Items.Clear(); tempTables.DataSource = null;
         query.RefreshQuery(); query.TextBox.ReadOnly = true;
         session?.Dispose();
         session = new DebugSession(SqlCatalog.ConnectionString(server.Text, database.Text), breakpoints);
         session.Output += text => Dispatch(() => Log(text));
+        session.TablesChanged += discovery => Dispatch(() =>
+        {
+            if (session?.IsPaused == true && currentPause?.PauseId == discovery.PauseId)
+                SetTempTables(discovery.Tables);
+        });
         session.SourceLoaded += source => Dispatch(() =>
         {
             if (source.Key == "batch" && demo) query.LoadSource(source);
@@ -187,10 +210,12 @@ internal sealed class MainForm : Form
             DebugTrace.Write("UI show/highlight source end");
             locals.DataSource = snapshot.Variables.OrderBy(v => v.Name, StringComparer.OrdinalIgnoreCase)
                 .Select(v => new { v.Name, v.Type, v.Value }).ToList();
+            SetTempTables(snapshot.Tables);
             stack.Items.Clear(); foreach (var frame in snapshot.Stack) stack.Items.Add(new FrameItem(frame));
             status.Text = $"{snapshot.Reason} • {snapshot.Source.Database}.{snapshot.Source.DisplayName} • Line {snapshot.Line} • SPID {snapshot.Spid}";
             UpdateState();
             DebugTrace.Write("UI pause display complete");
+            if (tempDbPauseTest != null) _ = tempDbPauseTest(snapshot);
             if (smokeDirectory != null)
             {
                 if (snapshot.Source.Name.EndsWith("_Outer", StringComparison.Ordinal) && snapshot.Line == 4)
@@ -229,7 +254,7 @@ internal sealed class MainForm : Form
             query.TextBox.ReadOnly = false;
             query.ClearHighlight();
             foreach (var editor in editors.Values) editor.ClearHighlight();
-            locals.DataSource = null; stack.Items.Clear(); UpdateState();
+            locals.DataSource = null; stack.Items.Clear(); tempTables.DataSource = null; UpdateState();
             if (closing) Close();
         }
     }
@@ -245,6 +270,7 @@ internal sealed class MainForm : Form
         bool running = session?.IsRunning == true, paused = running && session!.IsPaused;
         startButton.Enabled = (!running || paused) && !loadingModules; demoButton.Enabled = !running && !loadingModules;
         intoButton.Enabled = overButton.Enabled = outButton.Enabled = paused;
+        tempTables.Enabled = paused;
         pauseButton.Enabled = running && !paused; stopButton.Enabled = running;
         loadButton.Enabled = openButton.Enabled = !running && !loadingModules; server.Enabled = database.Enabled = !running && !loadingModules;
     }
@@ -254,6 +280,25 @@ internal sealed class MainForm : Form
         if (dialog.ShowDialog(this) == DialogResult.OK) { query.LoadSource(new("batch", "Query", database.Text, File.ReadAllText(dialog.FileName), Array.Empty<StatementSpan>())); ShowSource(query.Source); }
     }
     private void ShowQuery() => ShowSource(query.Source);
+    private void SetTempTables(IReadOnlyList<TempDbObject>? tables)
+    {
+        if (tables == null) { tempTables.DataSource = null; return; }
+        if (tempTables.DataSource is List<TempDbObject> previous && previous.SequenceEqual(tables)) return;
+        int? selected = (tempTables.CurrentRow?.DataBoundItem as TempDbObject)?.ObjectId;
+        tempTables.DataSource = tables.ToList();
+        if (selected.HasValue)
+        {
+            var row = tempTables.Rows.Cast<DataGridViewRow>().FirstOrDefault(r => (r.DataBoundItem as TempDbObject)?.ObjectId == selected);
+            if (row != null) tempTables.CurrentCell = row.Cells[0];
+        }
+    }
+    private void InspectTable(TempDbObject table)
+    {
+        var debug = session!;
+        using var dialog = new TableSnapshotForm(table.Name, token => debug.InspectAsync(table, token));
+        snapshotOpenedTest?.Invoke(dialog);
+        dialog.ShowDialog(this);
+    }
     private void SaveSql()
     {
         if (ActiveEditor is not { } editor) return;
@@ -343,7 +388,7 @@ internal sealed class MainForm : Form
     private static extern IntPtr SendMessage(IntPtr window, int message, IntPtr wParam, IntPtr lParam);
     protected override void Dispose(bool disposing)
     {
-        if (disposing) query?.Dispose();
+        if (disposing) { globalCopies.Dispose(); query?.Dispose(); }
         base.Dispose(disposing);
     }
     private void SavePreview(string path)

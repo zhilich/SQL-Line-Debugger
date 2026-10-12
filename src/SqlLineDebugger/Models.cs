@@ -25,10 +25,12 @@ public sealed record SourceDocument(string Key, string Name, string Database, st
 }
 public sealed record StackFrame(int Level, SourceDocument Source, StatementSpan? Span = null);
 public sealed record PauseSnapshot(SourceDocument Source, StatementSpan Span, int Level, IReadOnlyList<VariableValue> Variables,
-    IReadOnlyList<StackFrame> Stack, string Reason, int Spid)
+    IReadOnlyList<StackFrame> Stack, string Reason, int Spid, IReadOnlyList<TempDbObject>? Tables = null, long PauseId = 0)
 {
     public int Line => Source.StatementLine(Span);
 }
+public sealed record TempDbObject(int ObjectId, string InternalName, string Name, DateTime Created, long LastLockSequence);
+public sealed record TableDiscovery(long PauseId, IReadOnlyList<TempDbObject> Tables);
 public sealed record Breakpoint(string SourceKey, string SourceHash, int Line, string Name);
 public enum DebugAction { Into, Over, Out, Continue }
 

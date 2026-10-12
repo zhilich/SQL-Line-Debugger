@@ -19,6 +19,10 @@ internal sealed class NativeDebugSession : IDisposable
     private int originLevel, spid;
     private Exception? callbackFailure;
     private Task? runningTask;
+    private TempDbTracker? tempDb;
+    private long pauseId;
+    private readonly string? tempDbSessionName;
+    public event Action<TableDiscovery>? TablesChanged;
     public bool IsPaused => paused;
     public bool IsRunning => runningTask is { IsCompleted: false };
     public event Action<PauseSnapshot>? Paused;
@@ -27,8 +31,8 @@ internal sealed class NativeDebugSession : IDisposable
     public event Action<SourceDocument>? SourceLoaded;
     public event Action? Running;
 
-    public NativeDebugSession(string connectionString, BreakpointStore breakpoints)
-    { this.connectionString = connectionString; this.breakpoints = breakpoints; }
+    public NativeDebugSession(string connectionString, BreakpointStore breakpoints, string? tempDbSessionName = null)
+    { this.connectionString = connectionString; this.breakpoints = breakpoints; this.tempDbSessionName = tempDbSessionName; }
 
     public Task RunAsync(string sql, bool demo = false)
     {
@@ -82,6 +86,12 @@ internal sealed class NativeDebugSession : IDisposable
                 if (Convert.ToInt32(check.ExecuteScalar()) != 1) throw new InvalidOperationException("Native SQL debugging requires sysadmin on the test instance.");
             }
             Output?.Invoke($"Connected to {control.DataSource} / {control.Database}, SQL {control.ServerVersion}.");
+            try
+            {
+                tempDb = new TempDbTracker(connectionString, text => Output?.Invoke(text), tempDbSessionName);
+                tempDb.Updated += tables => { if (paused && !stopped) TablesChanged?.Invoke(new TableDiscovery(Interlocked.Read(ref pauseId), tables)); };
+            }
+            catch (Exception ex) { Output?.Invoke("TempDB inspection unavailable: " + ex.Message); }
             if (demo)
             {
                 fixture = new DemoFixture(control);
@@ -101,6 +111,11 @@ internal sealed class NativeDebugSession : IDisposable
             using var worker = new SqlConnection(connectionString);
             worker.InfoMessage += (_, e) => Output?.Invoke(e.Message);
             worker.Open();
+            if (tempDb != null)
+            {
+                try { tempDb.Start(worker.ServerProcessId); }
+                catch (Exception ex) { Output?.Invoke("TempDB XE unavailable: " + ex.Message); tempDb.Dispose(); tempDb = null; }
+            }
             using var command = worker.CreateCommand();
             executingCommand = command;
             // Deliberately no GO splitter: SQL batches retain exact text offsets.
@@ -142,8 +157,14 @@ internal sealed class NativeDebugSession : IDisposable
             }
             NativeMethods.CloseDebuggerEvents();
             eventPump?.GetAwaiter().GetResult();
-            try { fixture?.Dispose(); }
-            finally { control?.Dispose(); control = null; Interlocked.Exchange(ref activeSession, 0); }
+            try { tempDb?.Dispose(); }
+            catch (Exception ex) { Output?.Invoke("TempDB cleanup: " + ex.Message); }
+            finally
+            {
+                tempDb = null;
+                try { fixture?.Dispose(); }
+                finally { control?.Dispose(); control = null; Interlocked.Exchange(ref activeSession, 0); }
+            }
         }
     }
 
@@ -185,7 +206,7 @@ internal sealed class NativeDebugSession : IDisposable
             }
             int batch = e.GetProperty("batch").GetInt32(), worker = e.GetProperty("worker").GetInt32(), level = e.GetProperty("level").GetInt32();
             var key = (batch, worker, level);
-            if (kind == "pop") { frames.Remove(key); return 0; }
+            if (kind == "pop") { tempDb?.Pop(level); frames.Remove(key); return 0; }
             if (kind is "push" or "dynamic")
             {
                 var spans = e.GetProperty("spans").EnumerateArray().Select(ReadSpan).ToArray();
@@ -203,6 +224,7 @@ internal sealed class NativeDebugSession : IDisposable
                     DebugTrace.Write("LoadSource end");
                 }
                 frames[key] = new StackFrame(level, source);
+                tempDb?.Push(level, source);
                 foreach (var span in spans) source.Range(span);
                 SourceLoaded?.Invoke(source);
                 return 0;
@@ -218,13 +240,14 @@ internal sealed class NativeDebugSession : IDisposable
             frames[key] = frame with { Span = activeSpan };
             var variables = e.GetProperty("variables").EnumerateArray().Select(v => new VariableValue(v.GetProperty("name").GetString()!,
                 v.GetProperty("type").GetString()!, v.GetProperty("value").GetString()!, v.GetProperty("flags").GetUInt32())).ToArray();
+            tempDb?.ObserveVariables(level, variables);
             bool breakpoint = breakpoints.Contains(current, activeSpan);
             bool shouldPause;
             lock (gate) shouldPause = breakNext || breakpoint || action == DebugAction.Into || (action == DebugAction.Over && level <= originLevel) || (action == DebugAction.Out && level < originLevel);
             if (!shouldPause) return 0;
             var stack = frames.Where(f => f.Key.Batch == batch && f.Key.Worker == worker && f.Key.Level <= level)
                 .OrderByDescending(f => f.Key.Level).Select(f => f.Value).ToArray();
-            var snapshot = new PauseSnapshot(current, activeSpan, level, variables, stack, breakpoint ? "Breakpoint" : breakNext ? "Break" : "Step", spid);
+            var snapshot = new PauseSnapshot(current, activeSpan, level, variables, stack, breakpoint ? "Breakpoint" : breakNext ? "Break" : "Step", spid, tempDb?.Snapshot(), Interlocked.Increment(ref pauseId));
             lock (gate)
             {
                 if (stopped) return 3;

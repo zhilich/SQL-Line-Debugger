@@ -1,0 +1,119 @@
+Connected to (localdb)\mssqllocaldb / Test, SQL 15.00.4382.
+Debug target SPID 64.
+Worker batch=0 id=0 level=0
+ambiguous
+resolved
+ready
+changed
+dropped
+Execution completed; 3 result set(s).
+PASS ambiguous mapping -> resolution, internal names, empty schema, duplicates, Unicode/NULL, cross-session isolation, updates/deletes, immutable snapshots, sort order and stale objects
+Connected to (localdb)\mssqllocaldb / Test, SQL 15.00.4382.
+Debug target SPID 63.
+Worker batch=0 id=0 level=0
+types-ready
+rollback-done
+unsupported-ready
+Execution completed; 0 result set(s).
+PASS uncommitted transaction, rollback, clustered index, supported numeric/text/binary/GUID types, off-row LOB and explicit unsupported-layout error
+Connected to (localdb)\mssqllocaldb / Test, SQL 15.00.4382.
+Debug target SPID 63.
+Worker batch=0 id=0 level=0
+PASS TypesLab #Types: 2 rows; Id:Int32, SmallValue:Int16, TinyValue:Byte, BigValue:Int64, Flag:Boolean, Amount:Decimal, RealValue:Single, FloatValue:Double, GuidValue:Guid, FixedText:String, AnsiText:String, UnicodeText:String, Bytes:Byte[], WideValue:SqlDecimal
+PASS TypesLab @binary: 1 rows; Id:Int32, FixedBytes:Byte[], ShortText:String
+Y1 TypesLab: supported physical layouts
+TempDB XE buffer lost events; confirmed names are preserved for live objects. Unresolved variables need new statement evidence.
+PASS TypesLab #ManyRows: 200 rows; Id:Int32, Payload:String
+Y2 TypesLab: 200 rows across multiple pages
+PASS TypesLab #UnsupportedDate: 1 rows; Id:Int32, Value:DateTime
+Y3 TypesLab: deliberately unsupported datetime2
+PASS TypesLab #NonUniqueClustered: 2 rows; Id:Int32, Label:String
+Y4 TypesLab: deliberately unsupported hidden uniquifier
+Execution completed; 0 result set(s).
+PASS #TemporalLayouts: 7 exact tuples / 28 native column types match owner SELECT
+PASS #ClusteredLayouts: 6 exact tuples / 7 native column types match owner SELECT
+PASS temporal precision 0..7, full date ranges, datetime/smalldatetime bounds and rounding, UTC/positive/negative/max offsets, NULLs; composite descending non-unique clustered keys, duplicates, deletes, empty/NULL text/binary and packed bits
+Connected to (localdb)\mssqllocaldb / Test, SQL 15.00.4382.
+Debug target SPID 64.
+Worker batch=0 id=0 level=0
+copy-ready
+copy-changed
+Execution completed; 1 result set(s).
+PASS global naming, real paused table-variable/temp-table copying, replacement/schema, duplicates, NULL, precision 38, binary, temporal offsets, uncommitted snapshots, empty schema, quoted identifiers, failure/stale protection, immutable copies and app-lifetime cleanup
+Connected to (localdb)\mssqllocaldb / Test, SQL 15.00.4382.
+Debug target SPID 64.
+Worker batch=0 id=0 level=0
+nested-ready
+child-returned
+nested-ready
+child-returned
+Execution completed; 2 result set(s).
+PASS nested/shadowed variables, inherited temp table, scope exit and repeated calls/object caching
+Connected to (localdb)\mssqllocaldb / Test, SQL 15.00.4382.
+Debug target SPID 64.
+Worker batch=0 id=0 level=0
+A1 Run: ambiguous pair before any single-variable use
+A2 Run: after single-variable use
+A3 Run: root variables populated
+B1 BuildWork: numbers ready
+TempDB XE buffer lost events; confirmed names are preserved for live objects. Unresolved variables need new statement evidence.
+P1 ProcessWork: row 1
+E2 EvaluateRow: tags created for row 1
+D1 ScoreRow: row=1; preliminary score=15
+P1 ProcessWork: row 2
+E2 EvaluateRow: tags created for row 2
+D1 ScoreRow: row=2; preliminary score=6
+P1 ProcessWork: row 3
+E2 EvaluateRow: tags created for row 3
+D1 ScoreRow: row=3; preliminary score=14
+Execution cancelled.
+PASS EXEC SqlDebugLab.ProcessWork: caller names/object IDs preserved, snapshots inspectable; XE loss notifications=1
+Connected to (localdb)\mssqllocaldb / Test, SQL 15.00.4382.
+Debug target SPID 64.
+Worker batch=0 id=0 level=0
+Execution completed; 1 result set(s).
+PASS table variable inside native-stepped scalar function
+Connected to (localdb)\mssqllocaldb / Test, SQL 15.00.4382.
+Debug target SPID 64.
+Worker batch=0 id=0 level=0
+[Run] starting seed=7; scenario=normal
+[BuildOrders] created 3 orders and 9 lines
+[AssessRisk] customer=1008, quantity=7, score=22, Accept
+[CalculateDiscount] category=Hardware, tier=Gold, rate=0.1000
+[PriceLine] order=1, line=1, net=235.93, tax=17.10, total=253.03
+[AssessRisk] customer=1008, quantity=2, score=6, Accept
+[CalculateDiscount] category=Office, tier=Gold, rate=0.0750
+[PriceLine] order=1, line=2, net=36.54, tax=2.65, total=39.19
+[AssessRisk] customer=1008, quantity=2, score=6, Accept
+[CalculateDiscount] category=Service, tier=Gold, rate=0.0450
+[PriceLine] order=1, line=3, net=31.04, tax=0.00, total=31.04
+[ProcessOrder] order=1, lines=3, shipping=0.00, total=323.26, Complete
+[AssessRisk] customer=1009, quantity=3, score=19, Accept
+[CalculateDiscount] category=Hardware, tier=Silver, rate=0.0750
+[PriceLine] order=2, line=1, net=90.05, tax=5.40, total=95.45
+[AssessRisk] customer=1009, quantity=6, score=26, Accept
+[CalculateDiscount] category=Office, tier=Silver, rate=0.1000
+[PriceLine] order=2, line=2, net=79.65, tax=4.78, total=84.43
+[AssessRisk] customer=1009, quantity=1, score=19, Accept
+[CalculateDiscount] category=Service, tier=Silver, rate=0.0300
+[PriceLine] order=2, line=3, net=24.25, tax=0.00, total=24.25
+[ProcessOrder] order=2, lines=3, shipping=12.50, total=216.63, Complete
+[AssessRisk] customer=1010, quantity=2, score=17, Accept
+[CalculateDiscount] category=Hardware, tier=Standard, rate=0.0250
+[PriceLine] order=3, line=1, net=80.34, tax=6.63, total=86.97
+[AssessRisk] customer=1010, quantity=2, score=17, Accept
+[CalculateDiscount] category=Office, tier=Standard, rate=0.0400
+[PriceLine] order=3, line=2, net=18.72, tax=1.54, total=20.26
+[AssessRisk] customer=1010, quantity=5, score=24, Accept
+[CalculateDiscount] category=Service, tier=Standard, rate=0.0400
+[PriceLine] order=3, line=3, net=96.00, tax=0.00, total=96.00
+[ProcessOrder] order=3, lines=3, shipping=5.00, total=208.23, Complete
+[Run] finished; completed=3; review=0; grand total=748.12
+Execution completed; 4 result set(s).
+PASS installed 16 KiB nested sample: Orders/Lines/Trace snapshots at leaf pause and unchanged four result sets/grand total
+Connected to (localdb)\mssqllocaldb / Test, SQL 15.00.4382.
+Debug target SPID 63.
+Worker batch=0 id=0 level=0
+Execution cancelled.
+PASS cancel and pause-only inspection
+ALL TEMPDB TESTS PASSED

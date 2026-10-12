@@ -18,6 +18,10 @@ public sealed class DebugSession : IDisposable
     private Process? worker;
     private Task? runningTask;
     private volatile bool paused, stopped, breakRequested;
+    private long pauseId;
+    private IReadOnlyList<TempDbObject> tempTables = Array.Empty<TempDbObject>();
+    public IReadOnlyList<TempDbObject> TempTables => Volatile.Read(ref tempTables);
+    public event Action<TableDiscovery>? TablesChanged;
     public bool IsPaused => paused;
     public bool IsRunning => runningTask is { IsCompleted: false };
     public event Action<PauseSnapshot>? Paused;
@@ -45,6 +49,16 @@ public sealed class DebugSession : IDisposable
         Running?.Invoke();
     }
     public void Break() { breakRequested = true; Send(new { kind = "break" }); }
+    public Task<DataTable> InspectAsync(TempDbObject table, CancellationToken cancellation = default)
+    {
+        if (!IsRunning || !IsPaused) throw new InvalidOperationException("Pause the debugger before inspecting a table.");
+        return TempDbInspector.ReadAsync(connectionString, table, cancellation);
+    }
+    internal Task<GlobalTableCopy> CopyToGlobalAsync(TempDbObject table, string name, GlobalTempTableCopies copies, CancellationToken cancellation = default)
+    {
+        if (!IsRunning || !IsPaused) throw new InvalidOperationException("Pause the debugger before copying a table.");
+        return copies.CopyAsync(connectionString, table, name, cancellation);
+    }
     public void Stop() { stopped = true; paused = false; Send(new { kind = "stop" }); }
     private void Send(object message)
     {
@@ -55,6 +69,7 @@ public sealed class DebugSession : IDisposable
     private async Task RunWorker(string sql, bool demo)
     {
         string pipeName = "SqlLineDebugger_" + Guid.NewGuid().ToString("N");
+        string tempDbSessionName = "SqlLineDebugger_TempDB_" + Guid.NewGuid().ToString("N");
         // Separate handles for each direction avoid read/write contention on a
         // duplex PipeStream. Buffer commands so a callback cannot block the UI.
         await using var events = new NamedPipeServerStream(pipeName + "_events", PipeDirection.In, 1, PipeTransmissionMode.Byte,
@@ -73,7 +88,7 @@ public sealed class DebugSession : IDisposable
             using var reader = new StreamReader(events);
             using var connectedWriter = new StreamWriter(commandPipe) { AutoFlush = true };
             // Startup precedes any commands enqueued while the worker connects.
-            await connectedWriter.WriteLineAsync(JsonSerializer.Serialize(new { kind = "start", data = new WorkerRequest(connectionString, sql, demo, breakpoints.All) }));
+            await connectedWriter.WriteLineAsync(JsonSerializer.Serialize(new { kind = "start", data = new WorkerRequest(connectionString, sql, demo, breakpoints.All, tempDbSessionName) }));
             using var sendCancellation = new CancellationTokenSource();
             var sendTask = SendCommands(connectedWriter, sendCancellation.Token);
             try
@@ -94,7 +109,18 @@ public sealed class DebugSession : IDisposable
                     case "paused":
                         paused = true;
                         if (stopped) { Send(new { kind = "stop" }); break; }
-                        Paused?.Invoke(e.GetProperty("data").Deserialize<PauseSnapshot>()!);
+                        var snapshot = e.GetProperty("data").Deserialize<PauseSnapshot>()!;
+                        Interlocked.Exchange(ref pauseId, snapshot.PauseId);
+                        Volatile.Write(ref tempTables, snapshot.Tables ?? Array.Empty<TempDbObject>());
+                        Paused?.Invoke(snapshot);
+                        break;
+                    case "tables":
+                        var discovery = e.GetProperty("data").Deserialize<TableDiscovery>()!;
+                        if (paused && discovery.PauseId == Interlocked.Read(ref pauseId))
+                        {
+                            Volatile.Write(ref tempTables, discovery.Tables);
+                            TablesChanged?.Invoke(discovery);
+                        }
                         break;
                     case "result": ResultSet?.Invoke(ReadTable(e.GetProperty("data"))); break;
                     case "error": throw new InvalidOperationException(e.GetProperty("data").GetString());
@@ -116,6 +142,8 @@ public sealed class DebugSession : IDisposable
             paused = false;
             if (!worker.HasExited && !worker.WaitForExit(5000)) worker.Kill(entireProcessTree: true);
             worker.Dispose(); worker = null;
+            try { await TempDbInspector.CleanupSessionAsync(connectionString, tempDbSessionName); }
+            catch (Exception ex) { Output?.Invoke("TempDB XE cleanup: " + ex.Message); }
         }
     }
     private async Task SendCommands(StreamWriter destination, CancellationToken cancellation)
@@ -142,4 +170,4 @@ public sealed class DebugSession : IDisposable
     }
 }
 
-internal sealed record WorkerRequest(string ConnectionString, string Sql, bool Demo, IReadOnlyList<Breakpoint> Breakpoints);
+internal sealed record WorkerRequest(string ConnectionString, string Sql, bool Demo, IReadOnlyList<Breakpoint> Breakpoints, string? TempDbSessionName = null);
