@@ -70,6 +70,6 @@ sqlcmd -S '(localdb)\mssqllocaldb' -E -b -i samples\Install-NestedProcedures.sql
 ```
 
 Validation checks totals, OUTPUT-derived results, row counts, all risk branches,
-zero-value lines, error propagation, and all four result sets. Logs:
-[installation sizes](../artifacts/nested-sample-install.log) and
-[scenario tests](../artifacts/nested-sample-tests.log).
+zero-value lines, error propagation, and all four result sets. The validation
+script writes results to `artifacts/nested-sample-tests.log`, which is excluded
+from Git.

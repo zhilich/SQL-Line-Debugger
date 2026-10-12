@@ -1,6 +1,0 @@
-PASS: actual #Types Inspect dialog; every cell formatted and scrolled into view; no DataError; bit/binary/decimal(38)/NULL display correct; snapshot retains native types.
-[22:42:15] Connected to (localdb)\mssqllocaldb / Test, SQL 15.00.4382.
-[22:42:15] Debug target SPID 65.
-[22:42:15] Worker batch=0 id=0 level=0
-[22:42:17] Y1 TypesLab: supported physical layouts
-[22:42:17] Execution cancelled.

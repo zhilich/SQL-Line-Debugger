@@ -1,9 +1,0 @@
-PASS: Windows Forms created, nested function source highlighted, @answer=14 displayed, gutter breakpoint toggled, two result-set grids displayed.
-Step latencies (ms): 29.1, 3.5, 7.7, 22416.7, 9.4, 6.5, 10.4, 6.1, 6.1, 11.4, 9.3
-[09:47:30] Connected to (localdb)\mssqllocaldb / tempdb, SQL 15.00.4382.
-[09:47:30] Debug target SPID 57.
-[09:47:30] Worker batch=0 id=0 level=0
-[09:47:53] Inner procedure complete
-[09:47:53] Demo complete — expected result: 17
-[09:47:54] Execution completed; 2 result set(s).
-[09:47:54] Debugger cleanup HRESULT 0x80070057.

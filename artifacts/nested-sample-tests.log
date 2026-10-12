@@ -1,6 +1,0 @@
-PASS normal: 3 orders, 9 lines, 4 result sets, GrandTotal=748.12
-PASS edge: zero quantity, zero unit price, high quantity
-PASS branch coverage: Accept, Limited, Review; 12 orders, 36 lines
-PASS error: deepest THROW 51002 reaches Run CATCH and returns partial results
-PASS Rethrow=1: SQL exception 51002 propagated
-ALL SAMPLE TESTS PASSED

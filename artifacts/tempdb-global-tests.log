@@ -1,8 +1,0 @@
-Connected to (localdb)\mssqllocaldb / Test, SQL 15.00.4382.
-Debug target SPID 70.
-Worker batch=0 id=0 level=0
-copy-ready
-copy-changed
-Execution completed; 1 result set(s).
-PASS global naming, real paused table-variable/temp-table copying, replacement/schema, duplicates, NULL, precision 38, binary, temporal offsets, uncommitted snapshots, empty schema, quoted identifiers, failure/stale protection, immutable copies and app-lifetime cleanup
-ALL GLOBAL COPY TESTS PASSED

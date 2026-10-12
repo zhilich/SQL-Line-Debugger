@@ -1,8 +1,0 @@
-PASS: TempDB tab contains name, Inspect and Global; actual Inspect event opens modal read-only snapshot; target stays paused; snapshots never auto-refresh; subsequent Inspect captures mutation; unsupported format displays an error; list clears at session end.
-[22:42:10] Connected to (localdb)\mssqllocaldb / Test, SQL 15.00.4382.
-[22:42:10] Debug target SPID 65.
-[22:42:10] Worker batch=0 id=0 level=0
-[22:42:11] ui-ready
-[22:42:11] ui-changed
-[22:42:12] ui-error
-[22:42:12] Execution completed; 0 result set(s).

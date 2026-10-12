@@ -1,6 +1,15 @@
+# Generated build and publish output
 bin/
 obj/
-artifacts/SqlLineDebugger/
+/artifacts/
+
+# Local test and diagnostic output
+*.log
+*.dmp
+*.mdmp
+
+# Local IDE settings and downloaded development tools
 *.user
+*.suo
 .vs/
 .tools/

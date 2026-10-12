@@ -2,15 +2,16 @@
 
 A free, MIT-licensed Windows Forms debugger in C# / .NET 8 with real native SQL Server statement stepping. Tested on this workstation's `(localdb)\mssqllocaldb`, SQL Server 2019 15.0.4382.1.
 
-## Run the packaged app
+## Build and run
 
-Open `artifacts\SqlLineDebugger\SqlLineDebugger.exe`, or run:
+Build the app from source using the requirements in **Build and test** below:
 
 ```powershell
+.\build-debugger.ps1 -Publish
 .\artifacts\SqlLineDebugger\SqlLineDebugger.exe
 ```
 
-Keep all files in that folder together. The package requires the .NET 8 Windows Desktop x64 runtime, which is installed on this workstation. Windows authentication is used; native SQL debugging requires a sysadmin login and the SQL debugging COM proxy installed with SQL debugging/SSDT components. The app uses its own debug backend, not the SSDT debug engine.
+Keep all files in the generated `artifacts\SqlLineDebugger` folder together. The package requires the .NET 8 Windows Desktop x64 runtime. Windows authentication is used; native SQL debugging requires a sysadmin login and the SQL debugging COM proxy installed with SQL debugging/SSDT components. The app uses its own debug backend, not the SSDT debug engine.
 
 Click **Demo** to debug disposable, uniquely named modules in tempdb. The demo calls a scalar function and a nested procedure, exposes parameters and locals, prints messages, and returns two result sets. The result is `Seed=7`, `Doubled=14`, `Result=17`. Demo modules are dropped on normal completion and cancellation.
 
@@ -74,16 +75,7 @@ Run tests as the Windows user who owns LocalDB. Restricted sandboxes may be unab
 
 TempDB tests additionally cover ambiguous names and later resolution, empty schema, duplicates/NULL/Unicode, same-name objects in another session, snapshot immutability, updates/deletes/drop, transactions/rollback, numeric/GUID/binary/LOB values, nested/shadowed variables, cached objects across repeated calls, function variables, cancellation/SQL errors, and XE cleanup. Dialog tests exercise the actual Inspect event, verify the two-column list and read-only modal snapshot, check that the target remains paused and snapshots never auto-refresh, and verify inspection errors.
 
-- [Native test log](debugger-tests.log)
-- [UI test log](artifacts/ui-tests.log)
-- [Editor scroll test log](artifacts/editor-scroll-tests.log)
-- [TempDB integration test log](artifacts/tempdb-tests.log)
-- [TempDB dialog test log](artifacts/tempdb-ui-tests.log)
-- [TempDB list preview](artifacts/debugger-tempdb.png)
-- [Table snapshot preview](artifacts/tempdb-snapshot-1.png)
-- [Paused debugger preview](artifacts/debugger-paused.png)
-- [Result-set preview](artifacts/debugger-results.png)
-- [Architecture and support boundary](ARCHITECTURE.md)
+The test script generates `debugger-tests.log` and logs/screenshots under `artifacts`. Build outputs, published binaries, test results, and local IDE/tool caches are excluded from Git. Diagnostic scripts are preserved in [tests/probes](tests/probes/README.md). See [Architecture and support boundary](ARCHITECTURE.md) for implementation details.
 
 ## Current limits
 
