@@ -10,6 +10,10 @@ internal sealed partial class MainForm
         Directory.CreateDirectory(directory);
         database.Text = "Test";
         query.LoadSource(new("batch", "Query", "Test", """
+            CREATE TABLE #MoneyUi(Id int, Amount money, SmallAmount smallmoney);
+            INSERT #MoneyUi VALUES(1,-922337203685477.5808,-214748.3648),
+                (2,922337203685477.5807,214748.3647),(3,NULL,NULL);
+            PRINT N'money-ui-ready';
             CREATE TABLE #Snapshots(Sequence int IDENTITY PRIMARY KEY, ModuleName nvarchar(40),
                 [Checkpoint] nvarchar(80), [RowCount] int, Note nvarchar(160));
             EXEC SqlDebugLab.TypesLab @IncludeUnsupported=1;
@@ -32,7 +36,9 @@ internal sealed partial class MainForm
                 try
                 {
                     if (dialog.CaptureError != null) throw dialog.CaptureError;
-                    Require(dialog.Snapshot?.Rows.Count == 2 && dialog.RowsGrid.Rows.Count == 2, "#Types snapshot contains both rows");
+                    bool money = dialog.Snapshot!.Columns.Contains("SmallAmount");
+                    int rowCount = money ? 3 : 2;
+                    Require(dialog.Snapshot.Rows.Count == rowCount && dialog.RowsGrid.Rows.Count == rowCount, "snapshot contains all rows");
                     foreach (DataGridViewRow row in dialog.RowsGrid.Rows)
                         foreach (DataGridViewCell cell in row.Cells)
                         {
@@ -42,9 +48,22 @@ internal sealed partial class MainForm
                         }
                     using var bitmap = new Bitmap(dialog.Width, dialog.Height);
                     dialog.DrawToBitmap(bitmap, new Rectangle(Point.Empty, dialog.Size));
-                    bitmap.Save(Path.Combine(directory, "tempdb-types-snapshot.png"), System.Drawing.Imaging.ImageFormat.Png);
+                    bitmap.Save(Path.Combine(directory, money ? "tempdb-money-snapshot.png" : "tempdb-types-snapshot.png"), System.Drawing.Imaging.ImageFormat.Png);
                     Require(errors.Count == 0, "snapshot DataError: " + string.Join(Environment.NewLine, errors));
                     Require(dialog.RowsGrid.Columns.Cast<DataGridViewColumn>().All(c => c is DataGridViewTextBoxColumn), "snapshot columns display text for arbitrary SQL types");
+                    if (money)
+                    {
+                        foreach (DataGridViewRow row in dialog.RowsGrid.Rows)
+                            foreach (string name in new[] { "Amount", "SmallAmount" })
+                            {
+                                var cell = row.Cells[name];
+                                string expected = cell.Value == DBNull.Value ? "NULL" : ((decimal)cell.Value).ToString(System.Globalization.CultureInfo.CurrentCulture);
+                                Require(cell.FormattedValue as string == expected, "money display preserves four places/full range/NULL");
+                            }
+                        Require(dialog.Snapshot.Columns["Amount"]!.DataType == typeof(decimal) && dialog.Snapshot.Columns["SmallAmount"]!.DataType == typeof(decimal), "money snapshot retains native decimal types");
+                        dialogs++;
+                        return;
+                    }
                     var valueRow = dialog.RowsGrid.Rows.Cast<DataGridViewRow>().Single(r => (int)r.Cells["Id"].Value == 1);
                     var nullRow = dialog.RowsGrid.Rows.Cast<DataGridViewRow>().Single(r => (int)r.Cells["Id"].Value == 2);
                     Require(valueRow.Cells["Flag"].FormattedValue as string == "True", "bit value displays without checkbox type mismatch");
@@ -64,21 +83,22 @@ internal sealed partial class MainForm
             try
             {
                 string sql = snapshot.Source.Statement(snapshot.Span).TrimStart();
-                if (sql.StartsWith("PRINT", StringComparison.OrdinalIgnoreCase) && sql.Contains("Y1 TypesLab"))
+                if (sql.StartsWith("PRINT", StringComparison.OrdinalIgnoreCase) && (sql.Contains("Y1 TypesLab") || sql.Contains("money-ui-ready")))
                 {
-                    await TempDbTests.WaitTables(session!, t => t.Any(x => x.Name == "#Types"));
+                    string name = sql.Contains("money-ui-ready") ? "#MoneyUi" : "#Types";
+                    await TempDbTests.WaitTables(session!, t => t.Any(x => x.Name == name));
                     var inspection = (TabControl)tempTables.Parent!.Parent!;
                     inspection.SelectedTab = (TabPage)tempTables.Parent;
                     int row = -1;
                     for (int retry = 0; retry < 100 && row < 0; retry++)
                     {
-                        row = tempTables.Rows.Cast<DataGridViewRow>().ToList().FindIndex(r => r.DataBoundItem is TempDbObject t && t.Name == "#Types");
+                        row = tempTables.Rows.Cast<DataGridViewRow>().ToList().FindIndex(r => r.DataBoundItem is TempDbObject t && t.Name == name);
                         if (row < 0) await Task.Delay(50);
                     }
-                    Require(row >= 0, "#Types bound to TempDB list");
+                    Require(row >= 0, name + " bound to TempDB list");
                     typeof(DataGridView).GetMethod("OnCellContentClick", BindingFlags.Instance | BindingFlags.NonPublic)!
                         .Invoke(tempTables, new object[] { new DataGridViewCellEventArgs(1, row) });
-                    session!.Stop();
+                    if (name == "#MoneyUi") session!.Resume(DebugAction.Into); else session!.Stop();
                 }
                 else session!.Resume(DebugAction.Into);
             }
@@ -89,8 +109,8 @@ internal sealed partial class MainForm
             await Start(false);
             if (failure != null) throw failure;
             if (lastError != null) throw lastError;
-            Require(dialogs == 1, "actual #Types Inspect dialog exercised");
-            File.WriteAllText(Path.Combine(directory, "tempdb-types-ui-tests.log"), "PASS: actual #Types Inspect dialog; every cell formatted and scrolled into view; no DataError; bit/binary/decimal(38)/NULL display correct; snapshot retains native types.\n" + output.Text);
+            Require(dialogs == 2, "actual #MoneyUi and #Types Inspect dialogs exercised");
+            File.WriteAllText(Path.Combine(directory, "tempdb-types-ui-tests.log"), "PASS: actual #MoneyUi and #Types Inspect dialogs; every cell formatted and scrolled into view; no DataError; money/smallmoney full ranges/four-place precision, bit/binary/decimal(38)/NULL display correct; snapshots retain native types.\n" + output.Text);
             return 0;
         }
         catch (Exception ex)

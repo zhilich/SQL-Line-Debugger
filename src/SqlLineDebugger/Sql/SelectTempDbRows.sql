@@ -66,12 +66,12 @@ BEGIN
             THROW 51000, 'Unsupported clustered uniquifier layout.', 1;
         IF EXISTS(SELECT 1 FROM #spr_columns WHERE is_sparse=1 OR is_computed=1 OR encryption_type IS NOT NULL
             OR is_dropped=1 OR is_uniqueifier=1
-            OR system_type_id NOT IN (48,52,56,127,104,59,62,106,108,231,239,167,175,165,173,36,40,41,42,43,58,61))
+            OR system_type_id NOT IN (48,52,56,127,104,59,62,60,122,106,108,231,239,167,175,165,173,36,40,41,42,43,58,61))
         BEGIN
             SELECT TOP(1) @message=N'Unsupported column '+QUOTENAME(name)+N' ('+TYPE_NAME(system_type_id)+N') or physical layout (sparse/computed/encrypted/dropped).'
             FROM #spr_columns WHERE is_sparse=1 OR is_computed=1 OR encryption_type IS NOT NULL
                 OR is_dropped=1 OR is_uniqueifier=1
-                OR system_type_id NOT IN (48,52,56,127,104,59,62,106,108,231,239,167,175,165,173,36,40,41,42,43,58,61)
+                OR system_type_id NOT IN (48,52,56,127,104,59,62,60,122,106,108,231,239,167,175,165,173,36,40,41,42,43,58,61)
             ORDER BY column_id;
             THROW 51000, @message, 1;
         END;
@@ -407,12 +407,22 @@ BEGIN
                                     SELECT @raw=CONVERT(varbinary(max),(SELECT CONVERT(varchar(max),bytes,2) AS [text()] FROM #spr_lob_pieces ORDER BY start_offset FOR XML PATH(''),TYPE).value('.','varchar(max)'),2);
                                 END;
                                 SELECT @reversed=0x,@i=@length;
-                                IF @type IN(52,56,127,59,62)
+                                IF @type IN(52,56,127,59,62,60,122)
                                     WHILE @i>0 BEGIN SET @reversed=@reversed+SUBSTRING(@raw,@i,1);SET @i=@i-1;END;
                                 IF @type=48 SET @value=CONVERT(nvarchar(100),CONVERT(tinyint,@raw));
                                 ELSE IF @type=52 SET @value=CONVERT(nvarchar(100),CONVERT(smallint,@reversed));
                                 ELSE IF @type=56 SET @value=CONVERT(nvarchar(100),CONVERT(int,@reversed));
                                 ELSE IF @type=127 SET @value=CONVERT(nvarchar(100),CONVERT(bigint,@reversed));
+                                ELSE IF @type IN(60,122)
+                                BEGIN
+                                    -- Uncompressed money/smallmoney are signed little-endian
+                                    -- integers scaled by 10,000. Decimal division preserves all
+                                    -- four places and the minimum signed value without overflow.
+                                    IF @length<>CASE WHEN @type=60 THEN 8 ELSE 4 END OR DATALENGTH(@raw)<>@length
+                                        THROW 51000, 'Money storage length mismatch.', 1;
+                                    SET @n=CASE WHEN @type=60 THEN CONVERT(bigint,@reversed) ELSE CONVERT(int,@reversed) END;
+                                    SET @value=CONVERT(nvarchar(40),CONVERT(decimal(19,4),CONVERT(decimal(19,0),@n)/CONVERT(decimal(5,0),10000)));
+                                END;
                                 ELSE IF @type=104 SET @value=CONVERT(nvarchar(1),(CONVERT(int,@raw)/CONVERT(int,POWER(2,@bit_position))) & 1);
                                 ELSE IF @type IN(231,239) SET @value=CONVERT(nvarchar(max),@raw);
                                 ELSE IF @type IN(167,175)
@@ -528,6 +538,7 @@ BEGIN
         BEGIN
             SET @type_sql=CASE @type WHEN 48 THEN N'tinyint' WHEN 52 THEN N'smallint' WHEN 56 THEN N'int' WHEN 127 THEN N'bigint'
                 WHEN 104 THEN N'bit' WHEN 59 THEN N'real' WHEN 62 THEN N'float' WHEN 36 THEN N'uniqueidentifier'
+                WHEN 60 THEN N'money' WHEN 122 THEN N'smallmoney'
                 WHEN 106 THEN N'decimal' WHEN 108 THEN N'numeric' WHEN 231 THEN N'nvarchar' WHEN 239 THEN N'nchar'
                 WHEN 167 THEN N'varchar' WHEN 175 THEN N'char' WHEN 165 THEN N'varbinary' WHEN 173 THEN N'binary' END;
             IF @type IN(40,41,42,43,58,61) SET @type_sql=CASE @type WHEN 40 THEN N'date' WHEN 41 THEN N'time' WHEN 42 THEN N'datetime2' WHEN 43 THEN N'datetimeoffset' WHEN 58 THEN N'smalldatetime' WHEN 61 THEN N'datetime' END;

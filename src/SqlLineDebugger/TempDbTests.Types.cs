@@ -7,6 +7,7 @@ internal static partial class TempDbTests
 {
     private static async Task TestTypesLab(TextWriter log)
     {
+        await TestMoneyLayouts(log);
         using (var setup = new SqlConnection(Connection))
         {
             await setup.OpenAsync();
