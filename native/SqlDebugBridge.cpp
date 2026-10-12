@@ -4,8 +4,8 @@
 #include <deque>
 #include <condition_variable>
 
-// Keep COM callback vtables native. Direct managed implementations crashed in
-// the original feasibility probe. All strings passed to managed code are copies.
+// Keep COM callback vtables native to avoid crashes from direct managed
+// implementations. All strings passed to managed code are copies.
 static std::mutex eventMutex;
 static std::condition_variable eventReady;
 static std::deque<std::wstring> eventQueue;

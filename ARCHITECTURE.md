@@ -45,6 +45,5 @@ The installed SQL Debugging 130 COM proxy expects a `Ping` method after `OnMatch
 
 - [Microsoft SQL Server debugger requirements](https://learn.microsoft.com/en-us/sql/ssdt/debugger/run-transact-sql-debugger?view=sql-server-ver17)
 - [Microsoft's published historical COM interface definitions](https://patents.google.com/patent/US7500225B2/en), appendix. These describe the ABI; they do not guarantee compatibility on current engines.
-- [Original local native probe](PROBE-README.md), [symbol feasibility results](FEASIBILITY.md), and [separate storage experiment](STORAGE-FEASIBILITY.md).
 
 Observed span interpretation, callback behavior, and compatibility claims are grounded in the application's own LocalDB test logs.
